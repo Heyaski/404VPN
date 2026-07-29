@@ -6,7 +6,8 @@ import { loadConfig } from "./config.js";
 import { renderTemplate } from "./templates.js";
 
 const QUEUE = "tg-notify";
-export const outboxJobId = (outboxId: string): string => `outbox:${outboxId}`;
+// BullMQ запрещает ':' в кастомных jobId (разделитель ключей Redis)
+export const outboxJobId = (outboxId: string): string => `outbox-${outboxId}`;
 
 export interface OutboxRow {
   id: string;
@@ -58,11 +59,17 @@ export async function pollOutboxOnce(queue: Queue): Promise<number> {
       await pool.query("UPDATE notification_outbox SET status='failed' WHERE id=$1", [r.id]);
       continue;
     }
-    await queue.add("send", r, {
-      jobId: outboxJobId(r.id),
-      attempts: 3,
-      backoff: { type: "exponential", delay: 2000 },
-    });
+    try {
+      await queue.add("send", r, {
+        jobId: outboxJobId(r.id),
+        attempts: 3,
+        backoff: { type: "exponential", delay: 2000 },
+      });
+    } catch (e) {
+      // не удалось поставить в очередь — вернуть в pending, иначе строка зависнет в queued навсегда
+      await pool.query("UPDATE notification_outbox SET status='pending' WHERE id=$1", [r.id]);
+      throw e;
+    }
   }
   return rows.length;
 }

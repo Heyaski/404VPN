@@ -9,9 +9,10 @@ beforeEach(async () => { await truncateAll(pool); });
 afterAll(async () => { await pool.end(); });
 
 describe("notifier", () => {
-  it("jobId is deterministic", () => {
-    expect(outboxJobId("abc")).toBe("outbox:abc");
+  it("jobId is deterministic and contains no ':' (BullMQ rejects it)", () => {
+    expect(outboxJobId("abc")).toBe("outbox-abc");
     expect(outboxJobId("abc")).toBe(outboxJobId("abc"));
+    expect(outboxJobId("550e8400-e29b-41d4-a716-446655440000")).not.toMatch(/:/);
   });
   it("claims pending rows once and marks them queued", async () => {
     const { rows: [t] } = await pool.query(
