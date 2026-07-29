@@ -15,6 +15,10 @@ const Env = z.object({
   PORT: z.coerce.number().default(8080),
   // URL Mini App (https://<домен>/) — задаётся в проде, локально можно не указывать
   MINIAPP_URL: z.string().url().optional(),
+  // wg-easy: без них сервис работает, но туннели не выдаются (503)
+  WG_EASY_URL: z.string().url().optional(),
+  WG_EASY_PASSWORD: z.string().optional(),
+  WG_ENDPOINT_HOST: z.string().optional(),
 });
 export type Config = z.infer<typeof Env>;
 

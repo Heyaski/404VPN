@@ -44,3 +44,45 @@
 5. **Robokassa:** Result URL сменить на `https://<домен>/payhook/robokassa/result` (метод POST), проверить тестовым платежом.
 6. **BotFather:** `/setmenubutton` → выбрать бота → URL `https://<домен>/` → название кнопки «Открыть 404VPN». Кнопка в `/start` появится сама из `MINIAPP_URL`.
 7. **Проверка:** открыть Mini App из бота — виден баланс и история; пополнение открывает оплату Robokassa; после оплаты баланс в Mini App обновляется.
+
+## Фаза 3: VPN по коду доступа и посуточный биллинг
+
+1. **Переменные в `.env`** — добавить три строки (пароль панели wg-easy тот же, которым вы входите в неё):
+
+   ```bash
+   WG_EASY_URL=http://host.docker.internal:51821
+   WG_EASY_PASSWORD=<пароль панели wg-easy>
+   WG_ENDPOINT_HOST=195.14.118.198
+   ```
+
+   Без них сервис запустится, но выдача туннелей вернёт 503 — бот и оплата продолжат работать.
+
+2. **Обновление и миграция:**
+
+   ```bash
+   git pull && docker compose up -d --build && set -a; . ./.env; set +a; ./db/migrate.sh
+   ```
+
+3. **Проверка связи с wg-easy из контейнера** (должен вернуться 200 или 401 — значит панель доступна):
+
+   ```bash
+   docker compose exec core node -e "fetch(process.env.WG_EASY_URL+'/api/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:process.env.WG_EASY_PASSWORD})}).then(r=>console.log('wg-easy:',r.status)).catch(e=>console.log('ошибка:',e.message))"
+   ```
+
+4. **Проверка активации кода** — возьмите код, который бот присылал после оплаты:
+
+   ```bash
+   curl -s -X POST https://<домен>/api/redeem -H 'Content-Type: application/json' -d '{"code":"XXXX-XXXX-XXXX-XXXX"}'
+   ```
+
+   В ответе — `token`, `balance`, `daysLeft`. Токен сохраните, он понадобится для следующей проверки.
+
+5. **Проверка выдачи туннеля** (подставьте токен из шага 4):
+
+   ```bash
+   curl -s -X POST https://<домен>/api/device/tunnel -H 'Authorization: Bearer <token>'
+   ```
+
+   Должен вернуться JSON с `privateKey`, `address` и блоком `peer`. Одновременно в панели wg-easy появится новый клиент с именем вида `404vpn-xxxxxxxx`.
+
+6. **Биллинг** работает сам: списание раз в сутки, при нуле баланса пир отключается и приходит уведомление, после пополнения — включается обратно. Планировщик запускается раз в час, функции идемпотентны в пределах суток.
