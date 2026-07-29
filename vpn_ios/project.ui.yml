@@ -1,0 +1,66 @@
+name: VPN404UI
+options:
+  bundleIdPrefix: co.404studio
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+  groupSortPosition: none
+
+targets:
+  VPN404:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+      - path: Assets.xcassets
+    info:
+      path: App/Info.generated.plist
+      properties:
+        CFBundleDisplayName: 404VPN
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIUserInterfaceStyle: Dark
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        ITSAppUsesNonExemptEncryption: false
+        # Базовый URL API — чтобы домен не был зашит в коде
+        APIBaseURL: https://404studiotech-miniapp.ru
+    entitlements:
+      path: App/App.generated.entitlements
+      properties:
+        com.apple.developer.networking.networkextension: [packet-tunnel-provider]
+        com.apple.security.application-groups: [group.co.404studio.vpn]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: co.404studio.vpn
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "5.0"
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGNING_ALLOWED: NO
+
+
+  VPN404Tests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    settings:
+      base:
+        SWIFT_VERSION: "5.0"
+        CODE_SIGNING_ALLOWED: NO
+    dependencies:
+      - target: VPN404
+
+schemes:
+  VPN404:
+    build:
+      targets:
+        VPN404: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - VPN404Tests

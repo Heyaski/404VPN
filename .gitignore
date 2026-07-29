@@ -5,3 +5,11 @@ graphify-out/
 .DS_Store
 xcuserdata/
 *.xcuserstate
+
+# iOS: проект генерируется XcodeGen из project.yml
+vpn_ios/*.xcodeproj/
+vpn_ios/**/*.generated.plist
+vpn_ios/**/*.generated.entitlements
+vpn_ios/.swiftpm/
+vpn_ios/Vendor/WireGuardKit/Sources/WireGuardKitGo/out/
+vpn_ios/Vendor/WireGuardKit/Sources/WireGuardKitGo/.tmp/
