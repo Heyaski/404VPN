@@ -31,14 +31,31 @@ services:
       REDIS_URL: redis://redis:6379
       # На VPS со сломанным IPv6 запросы к api.telegram.org виснут по AAAA-адресу
       NODE_OPTIONS: --dns-result-order=ipv4first
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_started
     restart: unless-stopped
+  caddy:
+    build:
+      context: .
+      dockerfile: infra/caddy/Dockerfile
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - core
+    restart: unless-stopped
 volumes:
   pgdata:
   redisdata:
+  caddy_data:
+  caddy_config:
