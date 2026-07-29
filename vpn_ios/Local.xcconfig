@@ -1,0 +1,14 @@
+// Подпись для сборки на устройство.
+//
+// Впишите Team ID своей команды Apple Developer (10 символов) в строку ниже.
+// Где взять: developer.apple.com → Account → Membership Details → Team ID.
+//
+// Этот файл подключён к обоим таргетам через project.yml, поэтому значение
+// переживает пересоздание проекта (`xcodegen generate`). Менять Team в интерфейсе
+// Xcode бесполезно — правка затрётся при следующей генерации.
+//
+// ВАЖНО: расширение туннеля требует entitlement Network Extensions, который даёт
+// только платная программа Apple Developer ($99/год). С бесплатным Apple ID
+// профиль для таргета VPN404Tunnel Xcode выпустить не сможет.
+
+DEVELOPMENT_TEAM =
