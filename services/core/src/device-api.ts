@@ -31,7 +31,7 @@ export function createRateLimiter(max: number, windowMs: number) {
 
 type RedeemResult =
   | { ok: true; token: string; balance: string; devices: number }
-  | { ok: false; error: "invalid_code" | "already_used" | "expired" | "revoked" };
+  | { ok: false; error: "invalid_code" | "already_used" | "expired" | "revoked" | "device_limit" };
 
 export interface DeviceRouterOptions {
   redeemMaxAttempts?: number;
@@ -73,30 +73,52 @@ export function createDeviceRouter(
           return { ok: false, error: "expired" };
         }
 
-        const maxDevices = await getSetting(c, "max_devices_default");
-        const { rows: [user] } = await c.query(
-          "INSERT INTO users (max_devices) VALUES ($1) RETURNING id", [maxDevices || 5]);
-        const { balanceAfter } = await applyBalanceChange(
-          c, user.id, Number(ac.amount), "code_redeem", { code_id: ac.id });
+        let userId: string;
+        let balance: string;
+
+        if (ac.user_id) {
+          // код привязки, выпущенный в Mini App: аккаунт уже есть, баланс не трогаем
+          const { rows: [account] } = await c.query(
+            "SELECT id, balance, max_devices FROM users WHERE id=$1 FOR UPDATE", [ac.user_id]);
+          if (!account) return { ok: false, error: "invalid_code" };
+          const { rows: [{ devices }] } = await c.query(
+            `SELECT count(*)::int AS devices FROM devices
+             WHERE user_id=$1 AND is_active AND revoked_at IS NULL`, [account.id]);
+          if (devices >= account.max_devices) return { ok: false, error: "device_limit" };
+          userId = account.id;
+          balance = account.balance;
+        } else {
+          // код покупки (старая схема): создаём аккаунт и зачисляем номинал
+          const maxDevices = await getSetting(c, "max_devices_default");
+          const { rows: [user] } = await c.query(
+            "INSERT INTO users (max_devices) VALUES ($1) RETURNING id", [maxDevices || 5]);
+          const applied = await applyBalanceChange(
+            c, user.id, Number(ac.amount), "code_redeem", { code_id: ac.id });
+          userId = user.id;
+          balance = applied.balanceAfter;
+          // код куплен в боте — привязываем telegram-аккаунт, чтобы /balance и уведомления работали
+          await c.query(
+            `UPDATE telegram_users SET user_id=$1
+             WHERE user_id IS NULL
+               AND id = (SELECT telegram_user_id FROM payment_orders WHERE access_code_id=$2)`,
+            [userId, ac.id]);
+        }
+
         await c.query(
           "UPDATE access_codes SET status='redeemed', redeemed_by=$2, redeemed_at=now() WHERE id=$1",
-          [ac.id, user.id]);
+          [ac.id, userId]);
 
         const token = generateDeviceToken();
         await c.query(
           "INSERT INTO devices(user_id, name, token_hash, platform) VALUES ($1,$2,$3,'ios')",
-          [user.id, typeof deviceName === "string" && deviceName ? deviceName.slice(0, 64) : "iPhone",
+          [userId, typeof deviceName === "string" && deviceName ? deviceName.slice(0, 64) : "iPhone",
            hashToken(token)]);
 
-        // если код был куплен в боте — привязываем telegram-аккаунт к созданному пользователю,
-        // чтобы /balance и уведомления заработали
-        await c.query(
-          `UPDATE telegram_users SET user_id=$1
-           WHERE user_id IS NULL
-             AND id = (SELECT telegram_user_id FROM payment_orders WHERE access_code_id=$2)`,
-          [user.id, ac.id]);
+        const { rows: [{ devices }] } = await c.query(
+          `SELECT count(*)::int AS devices FROM devices
+           WHERE user_id=$1 AND is_active AND revoked_at IS NULL`, [userId]);
 
-        return { ok: true, token, balance: balanceAfter, devices: 1 };
+        return { ok: true, token, balance, devices };
       });
 
       if (!result.ok) {

@@ -123,6 +123,46 @@ describe("POST /topup", () => {
   });
 });
 
+describe("POST /device-code", () => {
+  async function linkAccount(telegramId: number, maxDevices = 5): Promise<string> {
+    await call("/me", { initData: initDataFor(telegramId) });
+    const { rows: [u] } = await pool.query(
+      "INSERT INTO users (balance, max_devices) VALUES (300, $1) RETURNING id", [maxDevices]);
+    await pool.query("UPDATE telegram_users SET user_id=$1 WHERE telegram_id=$2", [u.id, telegramId]);
+    return u.id as string;
+  }
+
+  it("404 when the telegram account has no vpn account yet", async () => {
+    const r = await call("/device-code", { initData: initDataFor(20), method: "POST" });
+    expect(r.status).toBe(404);
+    expect(r.body.error).toBe("no_account");
+  });
+
+  it("issues a code bound to the account without touching the balance", async () => {
+    const userId = await linkAccount(21);
+    const r = await call("/device-code", { initData: initDataFor(21), method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.code).toMatch(/^[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}$/);
+    expect(r.body.expiresInMinutes).toBe(30);
+
+    const { rows: [ac] } = await pool.query("SELECT * FROM access_codes");
+    expect(ac.user_id).toBe(userId);
+    expect(ac.amount).toBe("0.00");
+    expect(ac.status).toBe("issued");
+    const { rows: [u] } = await pool.query("SELECT balance FROM users WHERE id=$1", [userId]);
+    expect(u.balance).toBe("300.00"); // баланс не тронут
+  });
+
+  it("keeps only the freshest code valid", async () => {
+    await linkAccount(22);
+    const first = await call("/device-code", { initData: initDataFor(22), method: "POST" });
+    const second = await call("/device-code", { initData: initDataFor(22), method: "POST" });
+    expect(first.body.code).not.toBe(second.body.code);
+    const { rows } = await pool.query("SELECT status FROM access_codes ORDER BY created_at");
+    expect(rows.map((r) => r.status)).toEqual(["revoked", "issued"]);
+  });
+});
+
 describe("GET /history", () => {
   it("lists balance transactions for a linked user", async () => {
     await call("/me", { initData: initDataFor(8) });

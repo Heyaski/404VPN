@@ -74,8 +74,6 @@ export async function pollOutboxOnce(queue: Queue): Promise<number> {
   return rows.length;
 }
 
-const escapeMdV2 = (s: string) => s.replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, (m) => `\\${m}`);
-
 export function startNotifier(bot: Telegraf): Worker {
   return new Worker<OutboxRow>(
     QUEUE,
@@ -89,11 +87,9 @@ export function startNotifier(bot: Telegraf): Worker {
         return;
       }
       try {
+        // коды в чат больше не отправляются — их выпускает Mini App по кнопке
         await bot.telegram.sendMessage(Number(r.chat_id),
           renderTemplate(tpl.text_template, r.payload as Record<string, string | number>));
-        if (r.template_key === "payment_success_code" && r.payload.code)
-          await bot.telegram.sendMessage(Number(r.chat_id),
-            `\`${escapeMdV2(String(r.payload.code))}\``, { parse_mode: "MarkdownV2" });
         await pool.query("UPDATE notification_outbox SET status='sent' WHERE id=$1", [r.id]);
       } catch (e: unknown) {
         const err = e as { response?: { error_code?: number } };

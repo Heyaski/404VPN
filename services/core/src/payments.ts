@@ -1,10 +1,9 @@
 import type pg from "pg";
 import { applyBalanceChange } from "./ledger.js";
-import { generateCode, normalizeCode, hashCode } from "./codes.js";
+import { getSetting } from "./settings.js";
 
 export type PaymentResult =
   | { kind: "credited"; userId: string; balanceAfter: string }
-  | { kind: "code_issued"; code: string; accessCodeId: string }
   | { kind: "already_processed" }
   | { kind: "rejected"; reason: string };
 
@@ -19,6 +18,36 @@ export async function createTopupOrder(
   return { orderId: row.id };
 }
 
+/**
+ * Находит аккаунт, на который зачислять оплату, создавая его при первой покупке.
+ * Аккаунт всегда привязывается к telegram-пользователю — благодаря этому он остаётся
+ * доступным, даже если все устройства отвязаны: код для нового устройства
+ * выпускается в Mini App.
+ */
+async function ensureAccount(c: pg.PoolClient, order: {
+  id: number;
+  user_id: string | null;
+  telegram_user_id: string | null;
+}): Promise<string | null> {
+  if (order.user_id) return order.user_id;
+  if (!order.telegram_user_id) return null;
+
+  const { rows: [tg] } = await c.query(
+    "SELECT user_id FROM telegram_users WHERE id=$1 FOR UPDATE", [order.telegram_user_id]);
+  let userId: string | null = tg?.user_id ?? null;
+
+  if (!userId) {
+    const maxDevices = await getSetting(c, "max_devices_default");
+    const { rows: [created] } = await c.query(
+      "INSERT INTO users (max_devices) VALUES ($1) RETURNING id", [maxDevices || 5]);
+    userId = created.id as string;
+    await c.query("UPDATE telegram_users SET user_id=$1 WHERE id=$2", [userId, order.telegram_user_id]);
+  }
+
+  await c.query("UPDATE payment_orders SET user_id=$1 WHERE id=$2", [userId, order.id]);
+  return userId;
+}
+
 export async function processSuccessfulPayment(
   c: pg.PoolClient, invId: number, outSum: string,
 ): Promise<PaymentResult> {
@@ -29,29 +58,20 @@ export async function processSuccessfulPayment(
   if (Number(outSum).toFixed(2) !== Number(order.amount).toFixed(2))
     return { kind: "rejected", reason: "sum mismatch" };
 
+  const userId = await ensureAccount(c, order);
+  if (!userId) return { kind: "rejected", reason: "order has no account" };
+
   await c.query("UPDATE payment_orders SET status='success', paid_at=now() WHERE id=$1", [invId]);
+  const { balanceAfter } = await applyBalanceChange(
+    c, userId, Number(order.amount), "topup", { order_id: invId });
 
-  const notify = (key: string, payload: Record<string, unknown>) =>
-    order.telegram_user_id
-      ? c.query(
-          "INSERT INTO notification_outbox(telegram_user_id, template_key, payload) VALUES ($1,$2,$3)",
-          [order.telegram_user_id, key, JSON.stringify(payload)],
-        )
-      : Promise.resolve();
-
-  if (order.user_id) {
-    const { balanceAfter } = await applyBalanceChange(
-      c, order.user_id, Number(order.amount), "topup", { order_id: invId });
-    await notify("payment_success", { amount: order.amount, balance: balanceAfter });
-    return { kind: "credited", userId: order.user_id, balanceAfter };
+  if (order.telegram_user_id) {
+    await c.query(
+      "INSERT INTO notification_outbox(telegram_user_id, template_key, payload) VALUES ($1,$2,$3)",
+      [order.telegram_user_id, "payment_success",
+       JSON.stringify({ amount: order.amount, balance: balanceAfter })],
+    );
   }
 
-  const code = generateCode();
-  const { rows: [ac] } = await c.query(
-    "INSERT INTO access_codes(code_hash, amount, expires_at) VALUES ($1,$2, now() + interval '90 days') RETURNING id",
-    [hashCode(normalizeCode(code)), order.amount],
-  );
-  await c.query("UPDATE payment_orders SET access_code_id=$2 WHERE id=$1", [invId, ac.id]);
-  await notify("payment_success_code", { amount: order.amount, code });
-  return { kind: "code_issued", code, accessCodeId: ac.id };
+  return { kind: "credited", userId, balanceAfter };
 }

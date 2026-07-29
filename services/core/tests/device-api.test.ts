@@ -138,6 +138,60 @@ describe("POST /api/redeem", () => {
   });
 });
 
+describe("POST /api/redeem с кодом привязки", () => {
+  async function makeAccountWithLinkCode(opts: { maxDevices?: number; devices?: number } = {}) {
+    const { rows: [u] } = await pool.query(
+      "INSERT INTO users (balance, max_devices) VALUES (300, $1) RETURNING id",
+      [opts.maxDevices ?? 5]);
+    for (let i = 0; i < (opts.devices ?? 0); i++) {
+      await pool.query(
+        "INSERT INTO devices(user_id, token_hash, wg_public_key) VALUES ($1,$2,$3)",
+        [u.id, `hash-${u.id}-${i}`, `pk-${u.id}-${i}`]);
+    }
+    const code = generateCode();
+    await pool.query(
+      `INSERT INTO access_codes(code_hash, amount, expires_at, user_id)
+       VALUES ($1, 0, now() + interval '30 minutes', $2)`,
+      [hashCode(normalizeCode(code)), u.id]);
+    return { userId: u.id as string, code };
+  }
+
+  it("binds a new device to the existing account without changing the balance", async () => {
+    const { userId, code } = await makeAccountWithLinkCode();
+    const r = await call("/api/redeem", { method: "POST", body: { code } });
+    expect(r.status).toBe(200);
+    expect(r.body.balance).toBe("300.00");
+    expect(r.body.token).toBeTruthy();
+
+    const { rows } = await pool.query("SELECT count(*)::int AS n FROM users");
+    expect(rows[0].n).toBe(1); // новый аккаунт не создан
+    const { rows: [d] } = await pool.query("SELECT user_id FROM devices");
+    expect(d.user_id).toBe(userId);
+    const { rows: tx } = await pool.query("SELECT count(*)::int AS n FROM balance_transactions");
+    expect(tx[0].n).toBe(0); // баланс не начислялся
+  });
+
+  it("counts existing devices in the response", async () => {
+    const { code } = await makeAccountWithLinkCode({ devices: 2 });
+    const r = await call("/api/redeem", { method: "POST", body: { code } });
+    expect(r.body.daysLeft).toBe(30); // 300 ₽ на 3 устройства
+  });
+
+  it("refuses to exceed the device limit", async () => {
+    const { code } = await makeAccountWithLinkCode({ maxDevices: 2, devices: 2 });
+    const r = await call("/api/redeem", { method: "POST", body: { code } });
+    expect(r.status).toBe(400);
+    expect(r.body.error).toBe("device_limit");
+  });
+
+  it("cannot be reused", async () => {
+    const { code } = await makeAccountWithLinkCode();
+    await call("/api/redeem", { method: "POST", body: { code } });
+    const again = await call("/api/redeem", { method: "POST", body: { code } });
+    expect(again.body.error).toBe("already_used");
+  });
+});
+
 describe("device endpoints", () => {
   it("401 without or with a bad token", async () => {
     expect((await call("/api/device/me")).status).toBe(401);

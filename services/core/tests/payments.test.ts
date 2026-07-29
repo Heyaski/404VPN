@@ -32,17 +32,35 @@ describe("payments", () => {
     const { rows: [ob] } = await pool.query("SELECT * FROM notification_outbox");
     expect(ob.template_key).toBe("payment_success");
   });
-  it("new user: payment issues access code with amount", async () => {
+  it("first payment creates an account, links telegram to it and credits the balance", async () => {
     const tgId = await makeTgUser();
     const { orderId } = await tx((c) =>
       createTopupOrder(c, { telegramUserId: tgId, userId: null, amountRub: 150 }));
     const r = await tx((c) => processSuccessfulPayment(c, orderId, "150.00"));
-    expect(r.kind).toBe("code_issued");
-    if (r.kind !== "code_issued") throw new Error("unreachable");
-    expect(r.code).toMatch(/^[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}$/);
-    const { rows: [ac] } = await pool.query("SELECT * FROM access_codes");
-    expect(ac.amount).toBe("150.00");
-    expect(ac.status).toBe("issued");
+    expect(r.kind).toBe("credited");
+
+    const { rows: [tg] } = await pool.query("SELECT user_id FROM telegram_users WHERE id=$1", [tgId]);
+    expect(tg.user_id).toBeTruthy();
+    const { rows: [u] } = await pool.query("SELECT balance FROM users");
+    expect(u.balance).toBe("150.00");
+    // код больше не выпускается при оплате — его выдаёт Mini App по кнопке
+    const { rows } = await pool.query("SELECT count(*)::int AS n FROM access_codes");
+    expect(rows[0].n).toBe(0);
+  });
+
+  it("second payment from the same telegram account reuses it", async () => {
+    const tgId = await makeTgUser();
+    const first = await tx((c) =>
+      createTopupOrder(c, { telegramUserId: tgId, userId: null, amountRub: 100 }));
+    await tx((c) => processSuccessfulPayment(c, first.orderId, "100.00"));
+    const second = await tx((c) =>
+      createTopupOrder(c, { telegramUserId: tgId, userId: null, amountRub: 200 }));
+    await tx((c) => processSuccessfulPayment(c, second.orderId, "200.00"));
+
+    const { rows } = await pool.query("SELECT count(*)::int AS n FROM users");
+    expect(rows[0].n).toBe(1);
+    const { rows: [u] } = await pool.query("SELECT balance FROM users");
+    expect(u.balance).toBe("300.00");
   });
   it("duplicate callback is idempotent (single credit, single code)", async () => {
     const tgId = await makeTgUser();
@@ -55,6 +73,15 @@ describe("payments", () => {
     const { rows: [{ count }] } = await pool.query("SELECT count(*) FROM balance_transactions");
     expect(count).toBe("1");
   });
+  it("rejects an order with neither an account nor a telegram user", async () => {
+    const { orderId } = await tx((c) =>
+      createTopupOrder(c, { telegramUserId: null, userId: null, amountRub: 100 }));
+    const r = await tx((c) => processSuccessfulPayment(c, orderId, "100.00"));
+    expect(r.kind).toBe("rejected");
+    const { rows: [o] } = await pool.query("SELECT status FROM payment_orders WHERE id=$1", [orderId]);
+    expect(o.status).toBe("pending");
+  });
+
   it("rejects wrong OutSum", async () => {
     const tgId = await makeTgUser();
     const { orderId } = await tx((c) =>

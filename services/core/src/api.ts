@@ -1,13 +1,14 @@
 import express from "express";
 import type pg from "pg";
 import { pool as defaultPool, withTxOn } from "./db.js";
+import { generateCode, hashCode, normalizeCode } from "./codes.js";
 import { validateInitData } from "./webapp-auth.js";
 import { createTopupOrder } from "./payments.js";
 import { buildPaymentUrl, type RobokassaCreds } from "./robokassa.js";
 import { daysLeft } from "./templates.js";
 
 const MAX_TOPUP_RUB = 100_000;
-const MINIAPP_PATHS = ["/api/me", "/api/presets", "/api/topup", "/api/history"];
+const MINIAPP_PATHS = ["/api/me", "/api/presets", "/api/topup", "/api/history", "/api/device-code"];
 
 interface AuthedRequest extends express.Request {
   tgUserId?: string;
@@ -112,6 +113,32 @@ export function createApiRouter(
         description: `Пополнение 404VPN #${orderId}`,
       }),
     });
+  });
+
+  /**
+   * Код для привязки нового устройства. Выпускается по кнопке в Mini App,
+   * баланс не трогает и не зависит от оплаты — поэтому аккаунт остаётся доступным
+   * даже после отвязки всех устройств.
+   */
+  router.post("/api/device-code", async (req: AuthedRequest, res) => {
+    const account = await getLinkedAccount(db, req.tgUserId!);
+    if (!account) {
+      res.status(404).json({ error: "no_account" });
+      return;
+    }
+    const ttlMinutes = (await getSetting(db, "device_code_ttl_minutes")) || 30;
+    const code = generateCode();
+    await withTxOn(db, async (c) => {
+      // валидным держим ровно один код: прошлые невостребованные отзываем
+      await c.query(
+        "UPDATE access_codes SET status='revoked' WHERE user_id=$1 AND status='issued'", [account.id]);
+      await c.query(
+        `INSERT INTO access_codes(code_hash, amount, expires_at, user_id)
+         VALUES ($1, 0, now() + ($2 || ' minutes')::interval, $3)`,
+        [hashCode(normalizeCode(code)), String(ttlMinutes), account.id],
+      );
+    });
+    res.json({ code, expiresInMinutes: ttlMinutes });
   });
 
   router.get("/api/history", async (req: AuthedRequest, res) => {

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, type HistoryItem, type Me, type Presets } from "./api";
 import { Balance } from "./components/Balance";
 import { Topup } from "./components/Topup";
+import { DeviceCode } from "./components/DeviceCode";
 import { History } from "./components/History";
 
 export function App() {
@@ -49,6 +50,7 @@ export function App() {
 
       {me && <Balance me={me} />}
       {presets && <Topup presets={presets} onCreated={load} />}
+      {me && <DeviceCode linked={me.linked} />}
       {me && <History items={history} />}
     </div>
   );

@@ -72,6 +72,17 @@ describe("both routers on one app", () => {
     expect(withInitData.status).toBe(401);
   });
 
+  it("/api/device-code goes to the miniapp router, not to the device one", async () => {
+    // префикс /api/device не должен «съедать» /api/device-code
+    const r = await fetch(`${base}/api/device-code`, {
+      method: "POST",
+      headers: { "X-Telegram-Init-Data": buildInitData({ id: 5 }, TOKEN, Date.now() / 1000) },
+    });
+    // 404 no_account — значит запрос дошёл до обработчика Mini App, а не упёрся в 401 токена
+    expect(r.status).toBe(404);
+    expect((await r.json()).error).toBe("no_account");
+  });
+
   it("miniapp routes still require initData", async () => {
     expect((await fetch(`${base}/api/me`)).status).toBe(401);
     const ok = await fetch(`${base}/api/me`, {

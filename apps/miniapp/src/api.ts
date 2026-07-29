@@ -16,6 +16,10 @@ export interface HistoryItem {
   amount: string;
   date: string;
 }
+export interface DeviceCode {
+  code: string;
+  expiresInMinutes: number;
+}
 
 const FAKE: Record<string, unknown> = {
   "/me": { linked: true, balance: "300.00", devices: 1, status: "active", daysLeft: 90 },
@@ -31,10 +35,11 @@ const FAKE: Record<string, unknown> = {
   "/history": {
     items: [{ kind: "topup", amount: "300.00", date: new Date().toISOString() }],
   },
+  "/device-code": { code: "FQ39-5HYW-H814-R3EJ", expiresInMinutes: 30 },
 };
 
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  if (DEV_FAKE && (!init?.method || init.method === "GET")) return FAKE[path] as T;
+  if (DEV_FAKE && FAKE[path] !== undefined) return FAKE[path] as T;
   const res = await fetch(`/api${path}`, {
     ...init,
     headers: {
