@@ -33,6 +33,10 @@ services:
       NODE_OPTIONS: --dns-result-order=ipv4first
     expose:
       - "8080"
+    # default — postgres/redis/caddy; wgnet — сеть wg-easy (обращение по имени контейнера)
+    networks:
+      - default
+      - wgnet
     depends_on:
       postgres:
         condition: service_healthy
@@ -54,6 +58,14 @@ services:
     depends_on:
       - core
     restart: unless-stopped
+networks:
+  default:
+  # Сеть, в которой живёт wg-easy. Создаётся его собственным compose — здесь только
+  # подключаемся. Имя можно переопределить в .env через WG_NETWORK.
+  wgnet:
+    external: true
+    name: ${WG_NETWORK:-docker-app_default}
+
 volumes:
   pgdata:
   redisdata:
