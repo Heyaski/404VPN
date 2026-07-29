@@ -1,0 +1,7 @@
+.env
+node_modules/
+dist/
+graphify-out/
+.DS_Store
+xcuserdata/
+*.xcuserstate
