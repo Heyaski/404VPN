@@ -1,5 +1,6 @@
 import { loadConfig } from "./config.js";
 import { createWebhookApp } from "./webhook.js";
+import { createApiRouter } from "./api.js";
 import { createBot } from "./bot.js";
 import { createNotifyQueue, pollOutboxOnce, startNotifier } from "./notifier.js";
 
@@ -12,7 +13,8 @@ const creds = {
 };
 
 const app = createWebhookApp(creds);
-app.listen(cfg.PORT, () => console.log(`webhook on :${cfg.PORT}`));
+app.use(createApiRouter(cfg.BOT_TOKEN, creds));
+app.listen(cfg.PORT, () => console.log(`webhook + api on :${cfg.PORT}`));
 
 const bot = createBot(cfg);
 

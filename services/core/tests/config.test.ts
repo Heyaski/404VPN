@@ -23,4 +23,12 @@ describe("loadConfig", () => {
   it("ROBOKASSA_TEST=0 disables test mode", () => {
     expect(loadConfig({ ...base, ROBOKASSA_TEST: "0" }).ROBOKASSA_TEST).toBe(false);
   });
+  it("MINIAPP_URL is optional and parsed when present", () => {
+    expect(loadConfig(base).MINIAPP_URL).toBeUndefined();
+    expect(loadConfig({ ...base, MINIAPP_URL: "https://404vpn.ru/" }).MINIAPP_URL)
+      .toBe("https://404vpn.ru/");
+  });
+  it("rejects a malformed MINIAPP_URL", () => {
+    expect(() => loadConfig({ ...base, MINIAPP_URL: "not-a-url" })).toThrow();
+  });
 });

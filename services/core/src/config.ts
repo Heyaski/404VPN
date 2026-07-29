@@ -13,6 +13,8 @@ const Env = z.object({
     .default("1")
     .transform((v) => v !== "0" && v.toLowerCase() !== "false"),
   PORT: z.coerce.number().default(8080),
+  // URL Mini App (https://<домен>/) — задаётся в проде, локально можно не указывать
+  MINIAPP_URL: z.string().url().optional(),
 });
 export type Config = z.infer<typeof Env>;
 

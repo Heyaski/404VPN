@@ -1,5 +1,6 @@
 import { Telegraf, Markup } from "telegraf";
 import type { Context } from "telegraf";
+import type { InlineKeyboardButton } from "telegraf/types";
 import type { Config } from "./config.js";
 import { pool, withTx } from "./db.js";
 import { createTopupOrder } from "./payments.js";
@@ -29,13 +30,15 @@ async function upsertTgUser(from: { id: number; username?: string }, chatId: num
   return r.id;
 }
 
-async function presetsKeyboard() {
+async function presetsKeyboard(miniAppUrl?: string) {
   const { rows } = await pool.query(
     "SELECT amount, title FROM topup_presets WHERE is_active ORDER BY sort_order");
-  return Markup.inlineKeyboard(
-    rows.map((p) => Markup.button.callback(p.title, `topup:${Number(p.amount)}`)),
-    { columns: 2 },
-  );
+  const presets = rows.map((p) => Markup.button.callback(p.title, `topup:${Number(p.amount)}`));
+  const keyboard: InlineKeyboardButton[][] = miniAppUrl
+    ? [[Markup.button.webApp("Открыть 404VPN", miniAppUrl)]]
+    : [];
+  for (let i = 0; i < presets.length; i += 2) keyboard.push(presets.slice(i, i + 2));
+  return Markup.inlineKeyboard(keyboard);
 }
 
 export function createBot(cfg: Config): Telegraf {
@@ -68,7 +71,8 @@ export function createBot(cfg: Config): Telegraf {
 
   bot.start(async (ctx) => {
     await upsertTgUser(ctx.from, ctx.chat.id);
-    await ctx.reply(renderTemplate(await getTemplate("welcome"), {}), await presetsKeyboard());
+    await ctx.reply(
+      renderTemplate(await getTemplate("welcome"), {}), await presetsKeyboard(cfg.MINIAPP_URL));
   });
 
   bot.action(/^topup:(\d+)$/, async (ctx) => {
