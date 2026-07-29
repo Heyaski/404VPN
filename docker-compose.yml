@@ -29,6 +29,8 @@ services:
     environment:
       DATABASE_URL: postgres://vpn:${POSTGRES_PASSWORD}@postgres:5432/vpn
       REDIS_URL: redis://redis:6379
+      # На VPS со сломанным IPv6 запросы к api.telegram.org виснут по AAAA-адресу
+      NODE_OPTIONS: --dns-result-order=ipv4first
     ports:
       - "8080:8080"
     depends_on:
