@@ -27,7 +27,7 @@
 **Interfaces:**
 - Produces: схема БД целиком (все таблицы из `docs/ARCHITECTURE.md` §4 + `schema_migrations`), сиды `settings`/`topup_presets`/`notification_templates`. Контейнеры `postgres` (127.0.0.1:5432, db/user `vpn`) и `redis` (127.0.0.1:6379).
 
-- [ ] **Step 1: .gitignore и README**
+- [x] **Step 1: .gitignore и README**
 
 `.gitignore`:
 ```gitignore
@@ -42,7 +42,7 @@ xcuserdata/
 
 `README.md`: одна строка названия + ссылки на `docs/ARCHITECTURE.md`, `docs/DESIGN.md`, этот план.
 
-- [ ] **Step 2: docker-compose.yml**
+- [x] **Step 2: docker-compose.yml**
 
 ```yaml
 services:
@@ -88,7 +88,7 @@ ROBOKASSA_TEST=1
 PORT=8080
 ```
 
-- [ ] **Step 3: миграция 001_init.sql**
+- [x] **Step 3: миграция 001_init.sql**
 
 Полная схема из `docs/ARCHITECTURE.md` §4 (та — источник истины; ниже — готовый SQL):
 
@@ -245,12 +245,12 @@ done
 echo "migrations up to date"
 ```
 
-- [ ] **Step 4: проверить синтаксис**
+- [x] **Step 4: проверить синтаксис**
 
 Run: `docker compose config -q && bash -n db/migrate.sh && chmod +x db/migrate.sh`
 Expected: без вывода, код 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add .gitignore README.md docker-compose.yml .env.example db/
@@ -261,26 +261,26 @@ git commit -m "feat: repo scaffold, docker compose (postgres+redis), full DB sch
 
 **Files:** нет новых (используется Task 1).
 
-- [ ] **Step 1: создать .env из примера** (локально; пароль любой непустой)
+- [x] **Step 1: создать .env из примера** (локально; пароль любой непустой)
 
 Run: `[ -f .env ] || sed 's/change_me/vpn_dev_password/' .env.example > .env`
 
-- [ ] **Step 2: поднять контейнеры**
+- [x] **Step 2: поднять контейнеры**
 
 Run: `set -a; . ./.env; set +a; docker compose up -d --wait postgres redis`
 Expected: оба контейнера healthy/running.
 
-- [ ] **Step 3: применить миграции**
+- [x] **Step 3: применить миграции**
 
 Run: `set -a; . ./.env; set +a; ./db/migrate.sh`
 Expected: `applying 001_init.sql` … `migrations up to date`.
 
-- [ ] **Step 4: проверить схему и сиды**
+- [x] **Step 4: проверить схему и сиды**
 
 Run: `set -a; . ./.env; set +a; psql "$DATABASE_URL" -Atc "SELECT count(*) FROM notification_templates" && psql "$DATABASE_URL" -Atc "SELECT count(*) FROM topup_presets"`
 Expected: `6` и `4`.
 
-- [ ] **Step 5: повторный запуск идемпотентен**
+- [x] **Step 5: повторный запуск идемпотентен**
 
 Run: `set -a; . ./.env; set +a; ./db/migrate.sh`
 Expected: `skip 001_init.sql (applied)`.
@@ -293,7 +293,7 @@ Expected: `skip 001_init.sql (applied)`.
 **Interfaces:**
 - Produces: `loadConfig(env?)` → типизированный конфиг; `pool` (pg.Pool); `withTx(fn)` — транзакция с BEGIN/COMMIT/ROLLBACK. Все последующие задачи импортируют из `../src/*.js` (NodeNext ESM: импорты с расширением `.js`).
 
-- [ ] **Step 1: package.json / tsconfig / vitest**
+- [x] **Step 1: package.json / tsconfig / vitest**
 
 `package.json`:
 ```json
@@ -334,7 +334,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({ test: { include: ["tests/**/*.test.ts"] } });
 ```
 
-- [ ] **Step 2: failing test для конфига**
+- [x] **Step 2: failing test для конфига**
 
 `tests/config.test.ts`:
 ```ts
@@ -368,7 +368,7 @@ describe("loadConfig", () => {
 
 Run: `npm test` → Expected: FAIL (`Cannot find module '../src/config.js'`).
 
-- [ ] **Step 3: реализация**
+- [x] **Step 3: реализация**
 
 `src/config.ts`:
 ```ts
@@ -418,11 +418,11 @@ export async function withTx<T>(fn: (c: pg.PoolClient) => Promise<T>): Promise<T
 }
 ```
 
-- [ ] **Step 4: тесты зелёные**
+- [x] **Step 4: тесты зелёные**
 
 Run: `npm test` → Expected: 3 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add services/core
@@ -442,7 +442,7 @@ git commit -m "feat(core): service scaffold with zod config and pg pool"
   - `resultSignatureBase(creds, outSum, invId) → string`
   - `verifyResultSignature(creds, {OutSum, InvId, SignatureValue}) → boolean`
 
-- [ ] **Step 1: failing tests**
+- [x] **Step 1: failing tests**
 
 `tests/robokassa.test.ts`:
 ```ts
@@ -487,7 +487,7 @@ describe("robokassa", () => {
 
 Run: `npm test` → Expected: FAIL (module not found).
 
-- [ ] **Step 2: реализация**
+- [x] **Step 2: реализация**
 
 `src/robokassa.ts`:
 ```ts
@@ -545,9 +545,9 @@ export function verifyResultSignature(
 }
 ```
 
-- [ ] **Step 3: тесты зелёные** — Run: `npm test` → Expected: PASS (все).
+- [x] **Step 3: тесты зелёные** — Run: `npm test` → Expected: PASS (все).
 
-- [ ] **Step 4: Commit** — `git add services/core && git commit -m "feat(core): robokassa signatures and payment url"`
+- [x] **Step 4: Commit** — `git add services/core && git commit -m "feat(core): robokassa signatures and payment url"`
 
 > Формат подписи с Receipt проверить живым запросом при `IsTest=1` на этапе Task 10 — это единственное, что нельзя доказать юнит-тестом.
 
@@ -559,7 +559,7 @@ export function verifyResultSignature(
 **Interfaces:**
 - Produces: `CODE_ALPHABET` (Crockford Base32, без I/L/O/U), `generateCode() → "XXXX-XXXX-XXXX-XXXX"`, `normalizeCode(input) → string` (upper, убрать всё кроме [0-9A-Z], O→0, I/L→1), `hashCode(normalized) → sha256 hex`.
 
-- [ ] **Step 1: failing tests**
+- [x] **Step 1: failing tests**
 
 `tests/codes.test.ts`:
 ```ts
@@ -594,7 +594,7 @@ describe("access codes", () => {
 
 Run: `npm test` → Expected: FAIL (module not found).
 
-- [ ] **Step 2: реализация**
+- [x] **Step 2: реализация**
 
 `src/codes.ts`:
 ```ts
@@ -622,8 +622,8 @@ export function hashCode(normalized: string): string {
 }
 ```
 
-- [ ] **Step 3: тесты зелёные** — Run: `npm test` → Expected: PASS.
-- [ ] **Step 4: Commit** — `git commit -am "feat(core): access code generation, normalization, hashing"`
+- [x] **Step 3: тесты зелёные** — Run: `npm test` → Expected: PASS.
+- [x] **Step 4: Commit** — `git commit -am "feat(core): access code generation, normalization, hashing"`
 
 ### Task 6: Журнал баланса (ledger)
 
@@ -635,7 +635,7 @@ export function hashCode(normalized: string): string {
 - Produces: `applyBalanceChange(client, userId, amountRub: number, type, meta) → Promise<{ balanceAfter: string }>` — блокирует строку users FOR UPDATE, пишет users.balance и строку balance_transactions. `type: "topup" | "daily_charge" | "code_redeem" | "admin_adjust" | "refund"`.
 - Интеграционные тесты ходят в БД из docker compose: перед тестами `createdb vpn_test` + миграции (helper делает сам).
 
-- [ ] **Step 1: helper тестовой БД**
+- [x] **Step 1: helper тестовой БД**
 
 `tests/helpers/testdb.ts`:
 ```ts
@@ -662,7 +662,7 @@ export async function truncateAll(pool: pg.Pool): Promise<void> {
 }
 ```
 
-- [ ] **Step 2: failing tests**
+- [x] **Step 2: failing tests**
 
 `tests/ledger.test.ts`:
 ```ts
@@ -710,7 +710,7 @@ describe("applyBalanceChange", () => {
 
 Run: `npm test tests/ledger.test.ts` → Expected: FAIL (module not found). (Требует поднятых контейнеров из Task 2.)
 
-- [ ] **Step 3: реализация**
+- [x] **Step 3: реализация**
 
 `src/ledger.ts`:
 ```ts
@@ -734,8 +734,8 @@ export async function applyBalanceChange(
 }
 ```
 
-- [ ] **Step 4: тесты зелёные** — Run: `npm test` → Expected: PASS (все файлы).
-- [ ] **Step 5: Commit** — `git add services/core && git commit -m "feat(core): balance ledger with row-lock and integer-kopeck math"`
+- [x] **Step 4: тесты зелёные** — Run: `npm test` → Expected: PASS (все файлы).
+- [x] **Step 5: Commit** — `git add services/core && git commit -m "feat(core): balance ledger with row-lock and integer-kopeck math"`
 
 ### Task 7: Заказы и идемпотентная обработка ResultURL
 
@@ -749,7 +749,7 @@ export async function applyBalanceChange(
   - `processSuccessfulPayment(c, invId, outSum) → Promise<Result>` где `Result = { kind: "credited"; userId; balanceAfter } | { kind: "code_issued"; code; accessCodeId } | { kind: "already_processed" } | { kind: "rejected"; reason }`
   - `createWebhookApp(creds) → express.Express` c `POST /payhook/robokassa/result`.
 
-- [ ] **Step 1: failing tests** (интеграционные, БД из Task 6 helper)
+- [x] **Step 1: failing tests** (интеграционные, БД из Task 6 helper)
 
 `tests/payments.test.ts`:
 ```ts
@@ -828,7 +828,7 @@ describe("payments", () => {
 
 Run: `npm test tests/payments.test.ts` → Expected: FAIL (module not found).
 
-- [ ] **Step 2: реализация**
+- [x] **Step 2: реализация**
 
 `src/payments.ts`:
 ```ts
@@ -915,8 +915,8 @@ export function createWebhookApp(creds: RobokassaCreds): express.Express {
 }
 ```
 
-- [ ] **Step 3: тесты зелёные** — Run: `npm test` → Expected: PASS (все).
-- [ ] **Step 4: Commit** — `git add services/core && git commit -m "feat(core): topup orders, idempotent robokassa result processing, webhook app"`
+- [x] **Step 3: тесты зелёные** — Run: `npm test` → Expected: PASS (все).
+- [x] **Step 4: Commit** — `git add services/core && git commit -m "feat(core): topup orders, idempotent robokassa result processing, webhook app"`
 
 ### Task 8: Telegram-бот (long polling, вход + пополнение + баланс)
 
@@ -928,7 +928,7 @@ export function createWebhookApp(creds: RobokassaCreds): express.Express {
 - Produces: `createBot(cfg) → Telegraf`; `renderTemplate(tpl, vars) → string` (подстановка `{{var}}`, plain text); `daysLeft(balanceRub, devices, monthlyPrice) → number`.
 - Поведение: `/start` upsert'ит `telegram_users` + шлёт `welcome` с клавиатурой пресетов (из `topup_presets`) и кнопкой `web_app` (URL Mini App — из настройки, появится в фазе 2; пока кнопка не добавляется, если настройки нет); нажатие пресета или сообщение-число ≥ `min_topup` → `createTopupOrder` + inline-кнопка «Оплатить {N} ₽» с платёжной ссылкой; `/balance` — баланс/дни/устройства.
 
-- [ ] **Step 1: failing tests (чистые функции)**
+- [x] **Step 1: failing tests (чистые функции)**
 
 `tests/templates.test.ts`:
 ```ts
@@ -960,7 +960,7 @@ describe("daysLeft", () => {
 
 Run: `npm test tests/templates.test.ts` → Expected: FAIL.
 
-- [ ] **Step 2: реализация templates**
+- [x] **Step 2: реализация templates**
 
 `src/templates.ts`:
 ```ts
@@ -975,9 +975,9 @@ export function daysLeft(balanceRub: number, devices: number, monthlyPrice: numb
 }
 ```
 
-- [ ] **Step 3: тесты зелёные** — Run: `npm test tests/templates.test.ts` → Expected: PASS.
+- [x] **Step 3: тесты зелёные** — Run: `npm test tests/templates.test.ts` → Expected: PASS.
 
-- [ ] **Step 4: бот**
+- [x] **Step 4: бот**
 
 `src/bot.ts`:
 ```ts
@@ -1073,8 +1073,8 @@ export function createBot(cfg: Config): Telegraf {
 }
 ```
 
-- [ ] **Step 5: компиляция и все тесты** — Run: `npm run build && npm test` → Expected: сборка без ошибок, тесты PASS.
-- [ ] **Step 6: Commit** — `git add services/core && git commit -m "feat(core): telegraf bot: start, presets, custom amount, balance"`
+- [x] **Step 5: компиляция и все тесты** — Run: `npm run build && npm test` → Expected: сборка без ошибок, тесты PASS.
+- [x] **Step 6: Commit** — `git add services/core && git commit -m "feat(core): telegraf bot: start, presets, custom amount, balance"`
 
 ### Task 9: Outbox-воркер и очередь уведомлений (BullMQ)
 
@@ -1089,7 +1089,7 @@ export function createBot(cfg: Config): Telegraf {
   - `startNotifier(bot)` — BullMQ Worker c limiter `{ max: 20, duration: 1000 }`: рендерит шаблон, шлёт plain-text сообщение; для `payment_success_code` дополнительно шлёт код вторым сообщением `` `КОД` `` (MarkdownV2); ошибка 403 → `telegram_users.is_blocked_bot=true`, outbox `failed`; успех → `sent`.
   - `src/index.ts` — точка входа: конфиг → webhook app listen(PORT) → bot.launch() → startNotifier + setInterval(pollOutbox, 5000).
 
-- [ ] **Step 1: failing test (jobId + выборка pending)**
+- [x] **Step 1: failing test (jobId + выборка pending)**
 
 `tests/notifier.test.ts`:
 ```ts
@@ -1124,7 +1124,7 @@ describe("notifier", () => {
 
 Run: `npm test tests/notifier.test.ts` → Expected: FAIL.
 
-- [ ] **Step 2: реализация**
+- [x] **Step 2: реализация**
 
 `src/notifier.ts`:
 ```ts
@@ -1250,8 +1250,8 @@ process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
 ```
 
-- [ ] **Step 3: сборка + все тесты** — Run: `npm run build && npm test` → Expected: PASS.
-- [ ] **Step 4: Commit** — `git add services/core && git commit -m "feat(core): outbox notifier with bullmq throttling and entrypoint"`
+- [x] **Step 3: сборка + все тесты** — Run: `npm run build && npm test` → Expected: PASS.
+- [x] **Step 4: Commit** — `git add services/core && git commit -m "feat(core): outbox notifier with bullmq throttling and entrypoint"`
 
 ### Task 10: Dockerfile, compose-сервис и деплой-инструкция
 
@@ -1259,7 +1259,7 @@ process.once("SIGTERM", () => bot.stop("SIGTERM"));
 - Create: `services/core/Dockerfile`, `docs/DEPLOY.md`
 - Modify: `docker-compose.yml` (добавить сервис `core`)
 
-- [ ] **Step 1: Dockerfile (двухстадийный)**
+- [x] **Step 1: Dockerfile (двухстадийный)**
 
 ```dockerfile
 FROM node:20-alpine AS build
@@ -1279,7 +1279,7 @@ COPY --from=build /app/dist ./dist
 CMD ["node", "dist/index.js"]
 ```
 
-- [ ] **Step 2: сервис в docker-compose.yml** (добавить в `services:`)
+- [x] **Step 2: сервис в docker-compose.yml** (добавить в `services:`)
 
 ```yaml
   core:
@@ -1298,9 +1298,9 @@ CMD ["node", "dist/index.js"]
     restart: unless-stopped
 ```
 
-- [ ] **Step 3: проверить сборку** — Run: `docker compose build core && docker compose config -q` → Expected: успешная сборка.
+- [x] **Step 3: проверить сборку** — Run: `docker compose build core && docker compose config -q` → Expected: успешная сборка.
 
-- [ ] **Step 4: docs/DEPLOY.md** — пошагово для голого Ubuntu-сервера №2:
+- [x] **Step 4: docs/DEPLOY.md** — пошагово для голого Ubuntu-сервера №2:
 
 ```markdown
 # Деплой на сервер №2 (Ubuntu, с нуля)
@@ -1318,7 +1318,7 @@ CMD ["node", "dist/index.js"]
    переключить ROBOKASSA_TEST=0.
 ```
 
-- [ ] **Step 5: Commit** — `git add services/core/Dockerfile docker-compose.yml docs/DEPLOY.md && git commit -m "feat: dockerize core service, deploy guide"`
+- [x] **Step 5: Commit** — `git add services/core/Dockerfile docker-compose.yml docs/DEPLOY.md && git commit -m "feat: dockerize core service, deploy guide"`
 
 ---
 
@@ -1334,3 +1334,17 @@ CMD ["node", "dist/index.js"]
 2. **Фаза 3 — FastAPI + WireGuard:** wg-агент на NL-сервере, `POST /redeem` (rate limit), устройства, суточный биллинг-крон (списание, suspension, low_balance → outbox), сверка пиров.
 3. **Фаза 4 — Админка (React):** настройки, пресеты, пользователи (корректировка баланса через ledger), коды, транзакции, шаблоны, рассылки.
 4. **Фаза 5 — iOS:** NetworkExtension + WireGuardKit, ввод кода, экран подключения по `docs/DESIGN.md`. Prerequisite: Apple Developer Program.
+
+---
+
+## Статус: выполнено 2026-07-29 (все 10 задач, 29 тестов зелёные)
+
+Отклонения от плана по факту исполнения:
+
+- vitest закреплён на v2: vitest 4 требует Node новее 20.12 (rolldown/`util.styleText`).
+- npm поставил свежие мажоры: express 5, zod 4 — код совместим, тесты подтверждают.
+- Хост-порт Postgres — 55432 (5432 на машине разработки занят другим инстансом); `.env.example` и DEPLOY.md обновлены.
+- `vitest fileParallelism: false` — интеграционные файлы делят одну БД vpn_test.
+- `db.ts` создаёт пул из сырого env (лениво к валидации): полная zod-проверка — на старте `index.ts`; иначе модули не импортируются в тестах без окружения.
+
+Не проверено юнит-тестами и требует живого теста при деплое: формат подписи с `Receipt` на реальном запросе Robokassa (IsTest=1) — шаг 6 DEPLOY.md.
