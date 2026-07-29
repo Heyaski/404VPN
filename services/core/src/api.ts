@@ -7,6 +7,7 @@ import { buildPaymentUrl, type RobokassaCreds } from "./robokassa.js";
 import { daysLeft } from "./templates.js";
 
 const MAX_TOPUP_RUB = 100_000;
+const MINIAPP_PATHS = ["/api/me", "/api/presets", "/api/topup", "/api/history"];
 
 interface AuthedRequest extends express.Request {
   tgUserId?: string;
@@ -36,7 +37,9 @@ export function createApiRouter(
   const router = express.Router();
   router.use(express.json());
 
-  router.use("/api", async (req: AuthedRequest, res, next) => {
+  // Строго свои маршруты: на весь префикс /api вешать нельзя — там же живут
+  // /api/redeem и /api/device/* с другой аутентификацией (токен устройства).
+  router.use(MINIAPP_PATHS, async (req: AuthedRequest, res, next) => {
     const user = validateInitData(req.header("X-Telegram-Init-Data") ?? "", botToken);
     if (!user) {
       res.status(401).json({ error: "unauthorized" });
