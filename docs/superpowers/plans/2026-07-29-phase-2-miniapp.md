@@ -26,7 +26,7 @@
 **Interfaces:**
 - Produces: `interface WebAppUser { telegramId: number; username?: string; firstName?: string }`; `validateInitData(initData: string, botToken: string, maxAgeSec?: number, nowMs?: number): WebAppUser | null`; `buildInitData(user: object, botToken: string, authDate: number): string` (экспорт для тестов и только для них — генерирует валидную строку тем же алгоритмом).
 
-- [ ] **Step 1: failing tests**
+- [x] **Step 1: failing tests**
 
 ```ts
 import { describe, it, expect } from "vitest";
@@ -63,7 +63,7 @@ describe("validateInitData", () => {
 
 Run: `npx vitest run tests/webapp-auth.test.ts` → FAIL (module not found).
 
-- [ ] **Step 2: реализация**
+- [x] **Step 2: реализация**
 
 ```ts
 import { createHmac, timingSafeEqual } from "node:crypto";
@@ -105,8 +105,8 @@ export function buildInitData(user: object, botToken: string, authDate: number):
 }
 ```
 
-- [ ] **Step 3:** `npx vitest run` → все PASS.
-- [ ] **Step 4:** `git add services/core && git commit -m "feat(core): telegram webapp initData validation"`
+- [x] **Step 3:** `npx vitest run` → все PASS.
+- [x] **Step 4:** `git add services/core && git commit -m "feat(core): telegram webapp initData validation"`
 
 ### Task 2: API для Mini App
 
@@ -123,10 +123,10 @@ export function buildInitData(user: object, botToken: string, authDate: number):
   - `GET /api/history` → `{ items: {kind, amount, date, ...}[] }` — для привязанного: balance_transactions (50 шт.), иначе payment_orders этого telegram-аккаунта.
 - Все маршруты за middleware: `X-Telegram-Init-Data` → `validateInitData` → 401 при провале; upsert `telegram_users` (chat_id = telegramId для личных чатов).
 
-- [ ] **Step 1: failing integration tests** — через `buildInitData` из Task 1 и supertest-подобный вызов (express 5: использовать `app.listen(0)` + fetch на локальный порт; helper в тесте). Кейсы: 401 без заголовка; `/api/me` unlinked → `{linked:false}`; `/api/topup` меньше минимума → 400; `/api/topup` валидный → orderId + URL с `IsTest=1`; `/api/me` после ручной привязки user → balance/daysLeft. (Полные тела тестов — по образцу `payments.test.ts`, база `vpn_test`.)
-- [ ] **Step 2: реализация** `createApiRouter` (по контрактам выше; SQL-запросы те же паттерны, что в `bot.ts`).
-- [ ] **Step 3:** `npm run build && npx vitest run` → PASS.
-- [ ] **Step 4:** commit `feat(core): mini app api (me, presets, topup, history) with initData auth`.
+- [x] **Step 1: failing integration tests** — через `buildInitData` из Task 1 и supertest-подобный вызов (express 5: использовать `app.listen(0)` + fetch на локальный порт; helper в тесте). Кейсы: 401 без заголовка; `/api/me` unlinked → `{linked:false}`; `/api/topup` меньше минимума → 400; `/api/topup` валидный → orderId + URL с `IsTest=1`; `/api/me` после ручной привязки user → balance/daysLeft. (Полные тела тестов — по образцу `payments.test.ts`, база `vpn_test`.)
+- [x] **Step 2: реализация** `createApiRouter` (по контрактам выше; SQL-запросы те же паттерны, что в `bot.ts`).
+- [x] **Step 3:** `npm run build && npx vitest run` → PASS.
+- [x] **Step 4:** commit `feat(core): mini app api (me, presets, topup, history) with initData auth`.
 
 ### Task 3: Каркас Mini App + дизайн-токены
 
@@ -137,9 +137,9 @@ export function buildInitData(user: object, botToken: string, authDate: number):
 - Produces: `api<T>(path, opts?)` — fetch-обёртка, шлёт `X-Telegram-Init-Data: window.Telegram.WebApp.initData`, base `/api`; `tokens.css` — CSS-переменные из `docs/DESIGN.md` (dark по умолчанию), фоновая сетка, классы `.card`, `.btn-primary`, `.mono`.
 - `index.html` подключает `<script src="https://telegram.org/js/telegram-web-app.js"></script>` и Inter/IBM Plex Mono.
 
-- [ ] **Step 1:** `npm create vite@latest apps/miniapp -- --template react-ts` + `npm i` внутри.
-- [ ] **Step 2:** `tokens.css` — перенести таблицу токенов DESIGN.md в `:root`; тело: фон `--bg` + сетка `--grid-line` (background-image linear-gradient 32px), текст `--fg`, шрифты.
-- [ ] **Step 3:** `src/api.ts`:
+- [x] **Step 1:** `npm create vite@latest apps/miniapp -- --template react-ts` + `npm i` внутри.
+- [x] **Step 2:** `tokens.css` — перенести таблицу токенов DESIGN.md в `:root`; тело: фон `--bg` + сетка `--grid-line` (background-image linear-gradient 32px), текст `--fg`, шрифты.
+- [x] **Step 3:** `src/api.ts`:
 
 ```ts
 const initData = (window as any).Telegram?.WebApp?.initData ?? "";
@@ -153,7 +153,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 ```
 
-- [ ] **Step 4:** `npm run build` в apps/miniapp → сборка без ошибок. Commit `feat(miniapp): vite scaffold with 404studiotech design tokens`.
+- [x] **Step 4:** `npm run build` в apps/miniapp → сборка без ошибок. Commit `feat(miniapp): vite scaffold with 404studiotech design tokens`.
 
 ### Task 4: Экраны Mini App
 
@@ -167,9 +167,9 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 - **History**: список `/api/history`, суммы моноширинные, `+` зелёным (`--accent`), `-` обычным.
 - `Telegram.WebApp.ready()` + `expand()` на старте; MainButton не используем (кнопки в вёрстке).
 
-- [ ] **Step 1:** реализовать компоненты по контрактам API Task 2.
-- [ ] **Step 2:** `npm run build` — без ошибок; визуальная проверка `npm run dev` (initData пуст — API вернёт 401, для дев-режима добавить заглушку `VITE_DEV_FAKE=1`, показывающую мок-данные).
-- [ ] **Step 3:** commit `feat(miniapp): balance, topup, history screens`.
+- [x] **Step 1:** реализовать компоненты по контрактам API Task 2.
+- [x] **Step 2:** `npm run build` — без ошибок; визуальная проверка `npm run dev` (initData пуст — API вернёт 401, для дев-режима добавить заглушку `VITE_DEV_FAKE=1`, показывающую мок-данные).
+- [x] **Step 3:** commit `feat(miniapp): balance, topup, history screens`.
 
 ### Task 5: Caddy, домен, прод-сборка
 
@@ -213,17 +213,17 @@ COPY --from=build /app/dist /srv/app
 
 compose-сервис (`build.context: .`, `dockerfile: infra/caddy/Dockerfile`, ports 80/443, `environment: DOMAIN=${DOMAIN}`, volumes `caddy_data:/data`, depends_on core). Порт `core` 8080 наружу больше не публикуем (заменить `ports` на `expose`).
 
-- [ ] **Step 1:** файлы выше; `docker compose config -q`.
-- [ ] **Step 2:** `docker compose build caddy` — успешная сборка.
-- [ ] **Step 3:** commit `feat: caddy with auto-https serving miniapp and proxying api/payhook`.
+- [x] **Step 1:** файлы выше; `docker compose config -q`.
+- [x] **Step 2:** `docker compose build caddy` — успешная сборка.
+- [x] **Step 3:** commit `feat: caddy with auto-https serving miniapp and proxying api/payhook`.
 
 ### Task 6: Кнопка Mini App в боте
 
 **Files:**
 - Modify: `services/core/src/bot.ts` (в `/start` при заданном `cfg.MINIAPP_URL` добавить первой строкой клавиатуры `Markup.button.webApp("Открыть 404VPN", cfg.MINIAPP_URL)`), `services/core/tests/config.test.ts` (кейс: MINIAPP_URL опционален, парсится).
 
-- [ ] **Step 1:** тест конфига → FAIL; правка config (уже в Task 2) + bot.ts; `npm run build && npx vitest run` → PASS.
-- [ ] **Step 2:** commit `feat(core): web_app button in bot start`.
+- [x] **Step 1:** тест конфига → FAIL; правка config (уже в Task 2) + bot.ts; `npm run build && npx vitest run` → PASS.
+- [x] **Step 2:** commit `feat(core): web_app button in bot start`.
 
 ### Task 7: Деплой фазы 2
 
@@ -239,7 +239,7 @@ compose-сервис (`build.context: .`, `dockerfile: infra/caddy/Dockerfile`, 
 5. BotFather: `/setmenubutton` → URL `https://<домен>/` (кнопка меню бота), плюс кнопка в `/start` появится сама.
 6. Проверка: открыть Mini App из бота, увидеть баланс, пополнить, увидеть транзакцию в истории.
 
-- [ ] **Step 1:** дописать DEPLOY.md, commit `docs: phase-2 deploy (domain, caddy, botfather)`.
+- [x] **Step 1:** дописать DEPLOY.md, commit `docs: phase-2 deploy (domain, caddy, botfather)`.
 
 ---
 
@@ -248,3 +248,21 @@ compose-сервис (`build.context: .`, `dockerfile: infra/caddy/Dockerfile`, 
 - Все тесты `services/core` зелёные (включая webapp-auth и api).
 - `docker compose build` собирает caddy (со статикой miniapp) и core.
 - На проде: Mini App открывается из бота по HTTPS, показывает баланс/историю, пополнение открывает оплату Robokassa, после оплаты баланс в Mini App обновляется.
+
+---
+
+## Статус: выполнено 2026-07-29 (все 7 задач, 51 тест зелёный)
+
+Отклонения от плана по факту исполнения:
+
+- Task 2 и Task 6 объединены в один коммит: обе правки упирались в одно изменение `config.ts` (`MINIAPP_URL`).
+- `createApiRouter(botToken, creds, db?)` принимает третьим аргументом пул — тесты бьют в `vpn_test` без подмены `process.env`. Для этого в `db.ts` добавлен `withTxOn(pool, fn)`, а `withTx` теперь делегирует ему.
+- Роуты объявлены с полным префиксом (`router.get("/api/me")`), роутер монтируется в существующее express-приложение вебхука без `app.use("/api", …)`.
+- `apps/miniapp` создан вручную (не через `npm create vite`, чтобы не ловить интерактивный ввод); добавлены `src/vite-env.d.ts` (типы `import.meta.env`) и `@types/node` (чтение `process.env.PORT` в `vite.config.ts`).
+- `vite.config.ts` читает `PORT` из окружения — иначе dev-сервер игнорирует порт, назначенный превью-раннером.
+- `.claude/launch.json` с `autoPort: true` — порт 5173 на машине разработки занят Docker.
+- В compose у `core` вместо `ports` теперь `expose` (наружу ходит только Caddy на 80/443).
+
+Проверено вживую: Mini App собран (`vite build`), поднят в дев-режиме и снят скриншотом на мобильном вьюпорте — соответствует токенам `docs/DESIGN.md`; проверены подстановка произвольной суммы и блокировка кнопки при сумме ниже минимума.
+
+Не проверено (требует домена и деплоя): выпуск сертификата Caddy, открытие Mini App внутри Telegram, `initData` от реального клиента Telegram.
