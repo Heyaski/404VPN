@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "miniapp",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "apps/miniapp", "run", "dev:fake"],
+      "port": 5173,
+      "autoPort": true
+    }
+  ]
+}
