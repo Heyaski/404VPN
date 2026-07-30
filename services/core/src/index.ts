@@ -7,6 +7,7 @@ import { createAdminRouter } from "./admin-api.js";
 import { createBot } from "./bot.js";
 import { createNotifyQueue, pollOutboxOnce, startNotifier } from "./notifier.js";
 import { chargeDailyOnce, remindLowBalanceOnce, reactivateEligible } from "./billing.js";
+import { dispatchDueBroadcasts, finishSentBroadcasts } from "./broadcasts.js";
 import { NullWgProvider, type WgProvider } from "./wg/provider.js";
 import { WgEasyProvider } from "./wg/wg-easy.js";
 
@@ -48,6 +49,16 @@ launchBotWithRetry();
 const queue = createNotifyQueue();
 startNotifier(bot);
 setInterval(() => void pollOutboxOnce(queue).catch(console.error), 5000);
+
+// Рассылки: раз в минуту забираем созревшие и закрываем доехавшие.
+// Отправку делает тот же воркер уведомлений — с троттлингом под лимиты Telegram.
+async function broadcastTick(): Promise<void> {
+  const dispatched = await dispatchDueBroadcasts(pool);
+  const finished = await finishSentBroadcasts(pool);
+  if (dispatched || finished) console.log(`broadcasts: dispatched=${dispatched} finished=${finished}`);
+}
+void broadcastTick().catch(console.error);
+setInterval(() => void broadcastTick().catch(console.error), 60_000);
 
 // Биллинг: раз в час. Сами функции идемпотентны в пределах суток,
 // поэтому частый запуск безопасен и переживает простой сервиса.

@@ -9,6 +9,147 @@ const LABELS: Record<string, string> = {
   device_code_ttl_minutes: "Срок кода привязки, мин",
 };
 
+/** Кнопки пополнения: полное редактирование — сумма, подпись, видимость, добавление, удаление. */
+function PresetsCard({
+  presets,
+  onChanged,
+  onError,
+}: {
+  presets: SettingsPayload["presets"];
+  onChanged: () => void;
+  onError: (m: string) => void;
+}) {
+  const [edits, setEdits] = useState<Record<string, { amount: string; title: string }>>({});
+  const [newAmount, setNewAmount] = useState("");
+  const [newTitle, setNewTitle] = useState("");
+
+  const valueOf = (p: SettingsPayload["presets"][number]) =>
+    edits[p.id] ?? { amount: Number(p.amount).toFixed(0), title: p.title };
+
+  async function call(path: string, init: RequestInit) {
+    try {
+      await api(path, init);
+      setEdits({});
+      onChanged();
+    } catch (e) {
+      onError((e as Error).message);
+    }
+  }
+
+  return (
+    <div className="card">
+      <h3>Кнопки пополнения в боте</h3>
+      <p className="muted" style={{ margin: "0 0 12px", fontSize: 13 }}>
+        Эти кнопки пользователь видит в Mini App. Порядок — как в списке.
+      </p>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>сумма, ₽</th>
+              <th>подпись</th>
+              <th>видна</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {presets.map((p) => {
+              const v = valueOf(p);
+              const dirty = v.amount !== Number(p.amount).toFixed(0) || v.title !== p.title;
+              return (
+                <tr key={p.id}>
+                  <td>
+                    <input
+                      className="field-inline"
+                      style={{ width: 80 }}
+                      value={v.amount}
+                      onChange={(e) => setEdits({ ...edits, [p.id]: { ...v, amount: e.target.value } })}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      className="field-inline"
+                      style={{ width: 120 }}
+                      value={v.title}
+                      onChange={(e) => setEdits({ ...edits, [p.id]: { ...v, title: e.target.value } })}
+                    />
+                  </td>
+                  <td>
+                    <button
+                      className="btn-ghost"
+                      onClick={() => call(`/presets/${p.id}`, {
+                        method: "PUT",
+                        body: JSON.stringify({ is_active: !p.is_active }),
+                      })}
+                    >
+                      {p.is_active ? "да" : "нет"}
+                    </button>
+                  </td>
+                  <td>
+                    <div className="row-actions">
+                      {dirty && (
+                        <button
+                          className="btn-ghost"
+                          onClick={() => call(`/presets/${p.id}`, {
+                            method: "PUT",
+                            body: JSON.stringify({ amount: Number(v.amount), title: v.title }),
+                          })}
+                        >
+                          Сохранить
+                        </button>
+                      )}
+                      <button
+                        className="btn-ghost"
+                        onClick={() => call(`/presets/${p.id}`, { method: "DELETE" })}
+                      >
+                        Удалить
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="row-actions" style={{ marginTop: 14, alignItems: "center" }}>
+        <input
+          className="field-inline"
+          style={{ width: 80 }}
+          placeholder="сумма"
+          value={newAmount}
+          onChange={(e) => setNewAmount(e.target.value)}
+        />
+        <input
+          className="field-inline"
+          style={{ width: 120 }}
+          placeholder="подпись"
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+        />
+        <button
+          className="btn-ghost"
+          disabled={!Number(newAmount)}
+          onClick={() => {
+            void call("/presets", {
+              method: "POST",
+              body: JSON.stringify({
+                amount: Number(newAmount),
+                title: newTitle || `${Number(newAmount)} ₽`,
+              }),
+            });
+            setNewAmount("");
+            setNewTitle("");
+          }}
+        >
+          Добавить кнопку
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function Settings() {
   const [data, setData] = useState<SettingsPayload | null>(null);
   const [draft, setDraft] = useState<Record<string, string>>({});
@@ -40,15 +181,6 @@ export function Settings() {
     }
   }
 
-  async function savePreset(id: string, patch: Record<string, unknown>) {
-    try {
-      await api(`/presets/${id}`, { method: "PUT", body: JSON.stringify(patch) });
-      load();
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }
-
   if (!data) return <p className="muted">Загружаем…</p>;
 
   return (
@@ -69,36 +201,7 @@ export function Settings() {
         {error && <p className="error">{error}</p>}
       </div>
 
-      <div className="card">
-        <h3>Кнопки пополнения в боте</h3>
-        <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>сумма</th>
-                <th>подпись</th>
-                <th>видна</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.presets.map((p) => (
-                <tr key={p.id}>
-                  <td className="mono">{Number(p.amount).toFixed(0)}</td>
-                  <td>{p.title}</td>
-                  <td>
-                    <button
-                      className="btn-ghost"
-                      onClick={() => savePreset(p.id, { is_active: !p.is_active })}
-                    >
-                      {p.is_active ? "да" : "нет"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <PresetsCard presets={data.presets} onChanged={load} onError={setError} />
     </div>
   );
 }

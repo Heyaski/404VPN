@@ -16,7 +16,7 @@ export async function prepareTestDb(): Promise<pg.Pool> {
 
 export async function truncateAll(pool: pg.Pool): Promise<void> {
   await pool.query(
-    "TRUNCATE users, devices, telegram_users, access_codes, payment_orders, balance_transactions, notification_outbox CASCADE",
+    "TRUNCATE users, devices, telegram_users, access_codes, payment_orders, balance_transactions, notification_outbox, broadcasts CASCADE",
   );
   // settings и topup_presets общие для всех файлов: тест, меняющий цену устройства
   // или пресет, иначе ломает расчёт дней в соседних тестах. Возвращаем к сидовым значениям.

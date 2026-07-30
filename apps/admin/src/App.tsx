@@ -4,6 +4,8 @@ import { Dashboard } from "./pages/Dashboard";
 import { Users } from "./pages/Users";
 import { Codes } from "./pages/Codes";
 import { Payments } from "./pages/Payments";
+import { Broadcasts } from "./pages/Broadcasts";
+import { Templates } from "./pages/Templates";
 import { Settings } from "./pages/Settings";
 
 const TABS = [
@@ -11,6 +13,8 @@ const TABS = [
   { id: "users", title: "Пользователи" },
   { id: "codes", title: "Коды" },
   { id: "payments", title: "Платежи" },
+  { id: "broadcasts", title: "Рассылки" },
+  { id: "templates", title: "Шаблоны" },
   { id: "settings", title: "Настройки" },
 ] as const;
 
@@ -102,6 +106,8 @@ export function App() {
       {tab === "users" && <Users />}
       {tab === "codes" && <Codes />}
       {tab === "payments" && <Payments />}
+      {tab === "broadcasts" && <Broadcasts />}
+      {tab === "templates" && <Templates />}
       {tab === "settings" && <Settings />}
     </div>
   );

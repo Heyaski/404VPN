@@ -7,6 +7,7 @@ import { applyBalanceChange } from "./ledger.js";
 import { getSetting } from "./settings.js";
 import { daysLeft } from "./templates.js";
 import { reactivate } from "./billing.js";
+import { countAudience, type TargetFilter } from "./broadcasts.js";
 import { createRateLimiter } from "./device-api.js";
 import type { WgProvider } from "./wg/provider.js";
 
@@ -259,6 +260,149 @@ export function createAdminRouter(
             [key, JSON.stringify(numeric)]);
         }
       });
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // ── Шаблоны уведомлений ───────────────────────────────────
+  router.get("/admin/api/templates", async (_req, res) => {
+    const { rows } = await db.query(
+      "SELECT key, text_template, enabled, updated_at FROM notification_templates ORDER BY key");
+    res.json({ templates: rows });
+  });
+
+  router.put("/admin/api/templates/:key", async (req, res, next) => {
+    const body = req.body as { text_template?: unknown; enabled?: unknown };
+    const text = body?.text_template;
+    if (text !== undefined && (typeof text !== "string" || text.trim() === "")) {
+      res.status(400).json({ error: "empty_template" });
+      return;
+    }
+    try {
+      const { rowCount } = await db.query(
+        `UPDATE notification_templates
+         SET text_template = coalesce($2, text_template),
+             enabled = coalesce($3, enabled),
+             updated_at = now()
+         WHERE key = $1`,
+        [req.params.key,
+         typeof text === "string" ? text.slice(0, 2000) : null,
+         typeof body?.enabled === "boolean" ? body.enabled : null],
+      );
+      if (!rowCount) {
+        res.status(404).json({ error: "not_found" });
+        return;
+      }
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // ── Рассылки ──────────────────────────────────────────────
+  router.get("/admin/api/broadcasts", async (_req, res) => {
+    const { rows } = await db.query(
+      `SELECT id, title, message_text, target_filter, scheduled_at, status,
+              sent_count, failed_count, created_at
+       FROM broadcasts ORDER BY created_at DESC LIMIT 100`);
+    res.json({ broadcasts: rows });
+  });
+
+  /** Оценка аудитории до отправки — сколько получателей попадёт под фильтр. */
+  router.post("/admin/api/broadcasts/preview", async (req, res, next) => {
+    try {
+      const filter = (req.body as { target_filter?: TargetFilter })?.target_filter ?? { all: true };
+      const monthly = await getSetting(db, "device_monthly_price");
+      res.json({ recipients: await countAudience(db, filter, monthly) });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  router.post("/admin/api/broadcasts", async (req, res, next) => {
+    const body = req.body as {
+      title?: unknown;
+      message_text?: unknown;
+      target_filter?: TargetFilter;
+      scheduled_at?: unknown;
+      send_now?: unknown;
+    };
+    if (typeof body?.message_text !== "string" || body.message_text.trim() === "") {
+      res.status(400).json({ error: "empty_message" });
+      return;
+    }
+    // отправка «сейчас» — это то же расписание с прошедшим временем: одна кодовая ветка
+    const scheduledAt = body.send_now
+      ? new Date()
+      : typeof body.scheduled_at === "string" && !Number.isNaN(Date.parse(body.scheduled_at))
+        ? new Date(body.scheduled_at)
+        : null;
+    if (!scheduledAt) {
+      res.status(400).json({ error: "invalid_schedule" });
+      return;
+    }
+    try {
+      const { rows: [row] } = await db.query(
+        `INSERT INTO broadcasts(title, message_text, target_filter, scheduled_at, status)
+         VALUES ($1,$2,$3,$4,'scheduled') RETURNING id, scheduled_at`,
+        [typeof body.title === "string" && body.title ? body.title.slice(0, 120) : "Без названия",
+         body.message_text.slice(0, 4000),
+         JSON.stringify(body.target_filter ?? { all: true }),
+         scheduledAt],
+      );
+      res.json({ id: row.id, scheduled_at: row.scheduled_at });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  /** Отмена возможна, пока рассылка не начала разворачиваться в очередь. */
+  router.post("/admin/api/broadcasts/:id/cancel", async (req, res, next) => {
+    try {
+      const { rowCount } = await db.query(
+        "UPDATE broadcasts SET status='draft', scheduled_at=NULL WHERE id=$1 AND status='scheduled'",
+        [req.params.id]);
+      if (!rowCount) {
+        res.status(400).json({ error: "not_cancelable" });
+        return;
+      }
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // ── Кнопки пополнения ─────────────────────────────────────
+  router.post("/admin/api/presets", async (req, res, next) => {
+    const body = req.body as { amount?: unknown; title?: unknown };
+    const amount = Number(body?.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      res.status(400).json({ error: "invalid_amount" });
+      return;
+    }
+    try {
+      const { rows: [row] } = await db.query(
+        `INSERT INTO topup_presets(amount, title, sort_order)
+         VALUES ($1, $2, coalesce((SELECT max(sort_order) + 1 FROM topup_presets), 1))
+         RETURNING id`,
+        [amount.toFixed(2),
+         typeof body?.title === "string" && body.title ? body.title.slice(0, 40) : `${amount} ₽`],
+      );
+      res.json({ id: row.id });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  router.delete("/admin/api/presets/:id", async (req, res, next) => {
+    try {
+      const { rowCount } = await db.query("DELETE FROM topup_presets WHERE id=$1", [req.params.id]);
+      if (!rowCount) {
+        res.status(404).json({ error: "not_found" });
+        return;
+      }
       res.json({ ok: true });
     } catch (e) {
       next(e);
