@@ -3,6 +3,7 @@ import { pool } from "./db.js";
 import { createWebhookApp } from "./webhook.js";
 import { createApiRouter } from "./api.js";
 import { createDeviceRouter } from "./device-api.js";
+import { createAdminRouter } from "./admin-api.js";
 import { createBot } from "./bot.js";
 import { createNotifyQueue, pollOutboxOnce, startNotifier } from "./notifier.js";
 import { chargeDailyOnce, remindLowBalanceOnce, reactivateEligible } from "./billing.js";
@@ -27,6 +28,8 @@ if (wg instanceof NullWgProvider)
 const app = createWebhookApp(creds, wg);
 app.use(createApiRouter(cfg.BOT_TOKEN, creds));
 app.use(createDeviceRouter(wg));
+if (cfg.ADMIN_PASSWORD) app.use(createAdminRouter(cfg.ADMIN_PASSWORD, wg));
+else console.warn("ADMIN_PASSWORD не задан — админка отключена");
 app.listen(cfg.PORT, () => console.log(`webhook + api on :${cfg.PORT}`));
 
 const bot = createBot(cfg);

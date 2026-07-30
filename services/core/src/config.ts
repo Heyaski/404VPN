@@ -19,6 +19,8 @@ const Env = z.object({
   WG_EASY_URL: z.string().url().optional(),
   WG_EASY_PASSWORD: z.string().optional(),
   WG_ENDPOINT_HOST: z.string().optional(),
+  // пароль админки; без него /admin/api не монтируется вовсе
+  ADMIN_PASSWORD: z.string().min(8).optional(),
 });
 export type Config = z.infer<typeof Env>;
 
