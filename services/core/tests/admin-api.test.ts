@@ -117,13 +117,23 @@ describe("stats and users", () => {
     expect((await call("/admin/api/users?q=nobody")).body.users).toHaveLength(0);
   });
 
-  it("returns user details with devices and transactions", async () => {
+  it("returns user details with devices, transactions and computed days", async () => {
     const id = await makeUser(300);
     await pool.query(
       "INSERT INTO balance_transactions(user_id, type, amount, balance_after) VALUES ($1,'topup',300,300)", [id]);
     const r = await call(`/admin/api/users/${id}`);
     expect(r.body.devices).toHaveLength(1);
     expect(r.body.transactions).toHaveLength(1);
+    // карточка показывает эти поля рядом с балансом — без них в интерфейсе «undefined»
+    expect(r.body.user.devices).toBe(1);
+    expect(r.body.user.daysLeft).toBe(90);
+  });
+
+  it("reports infinite days for an account without devices", async () => {
+    const { rows: [u] } = await pool.query("INSERT INTO users (balance) VALUES (300) RETURNING id");
+    const r = await call(`/admin/api/users/${u.id}`);
+    expect(r.body.user.devices).toBe(0);
+    expect(r.body.user.daysLeft).toBeNull();
   });
 
   it("404 for an unknown user", async () => {

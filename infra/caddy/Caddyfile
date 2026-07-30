@@ -1,10 +1,24 @@
 {$DOMAIN} {
 	encode gzip
 
-	# вебхук Robokassa и API Mini App — на core
+	# колбэки Robokassa
 	handle /payhook/* {
 		reverse_proxy core:8080
 	}
+
+	# API админки — матчер длиннее, чем /admin*, поэтому Caddy отдаёт приоритет ему
+	handle /admin/api/* {
+		reverse_proxy core:8080
+	}
+
+	# статика админки: префикс /admin срезается, ассеты лежат в корне /srv/admin
+	handle_path /admin* {
+		root * /srv/admin
+		try_files {path} /index.html
+		file_server
+	}
+
+	# API Mini App и iOS-приложения
 	handle /api/* {
 		reverse_proxy core:8080
 	}

@@ -91,11 +91,18 @@ export function createAdminRouter(
   });
 
   router.get("/admin/api/users/:id", async (req, res) => {
-    const { rows: [user] } = await db.query("SELECT * FROM users WHERE id=$1", [req.params.id]);
+    // devices и daysLeft считаем здесь же — карточка показывает их рядом с балансом
+    const { rows: [user] } = await db.query(
+      `SELECT u.*, (SELECT count(*)::int FROM devices d
+                     WHERE d.user_id=u.id AND d.is_active AND d.revoked_at IS NULL) AS devices
+       FROM users u WHERE u.id=$1`, [req.params.id]);
     if (!user) {
       res.status(404).json({ error: "not_found" });
       return;
     }
+    const monthly = await getSetting(db, "device_monthly_price");
+    const left = daysLeft(Number(user.balance), user.devices, monthly);
+    user.daysLeft = Number.isFinite(left) ? left : null;
     const { rows: devices } = await db.query(
       `SELECT id, name, platform, is_active, revoked_at, wg_client_id, created_at, last_seen_at
        FROM devices WHERE user_id=$1 ORDER BY created_at DESC`, [req.params.id]);

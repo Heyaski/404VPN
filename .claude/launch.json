@@ -7,6 +7,13 @@
       "runtimeArgs": ["--prefix", "apps/miniapp", "run", "dev:fake"],
       "port": 5173,
       "autoPort": true
+    },
+    {
+      "name": "admin",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "apps/admin", "run", "dev"],
+      "port": 5174,
+      "autoPort": true
     }
   ]
 }
