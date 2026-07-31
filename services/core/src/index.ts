@@ -37,8 +37,21 @@ const bot = createBot(cfg);
 
 // Недоступность Telegram не должна ронять сервис (вебхук оплаты обязан жить):
 // пробуем запустить polling с экспоненциальным бэкоффом.
+/** Имя бота нужно для реферальной ссылки — берём его у Telegram и кладём в настройки. */
+async function cacheBotUsername(): Promise<void> {
+  const me = await bot.telegram.getMe();
+  if (!me.username) return;
+  await pool.query(
+    "UPDATE settings SET value = to_jsonb($1::text), updated_at = now() WHERE key = 'bot_username'",
+    [me.username]);
+  console.log(`bot username: @${me.username}`);
+}
+
 function launchBotWithRetry(attempt = 0): void {
-  bot.launch(() => console.log("bot polling started")).catch((e: Error) => {
+  bot.launch(() => {
+    console.log("bot polling started");
+    void cacheBotUsername().catch((e) => console.error("не удалось узнать имя бота:", e));
+  }).catch((e: Error) => {
     const delayMs = Math.min(60_000, 5_000 * 2 ** Math.min(attempt, 4));
     console.error(`bot launch failed: ${e.message}; retry in ${delayMs / 1000}s`);
     setTimeout(() => launchBotWithRetry(attempt + 1), delayMs);

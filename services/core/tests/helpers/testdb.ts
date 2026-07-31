@@ -16,7 +16,7 @@ export async function prepareTestDb(): Promise<pg.Pool> {
 
 export async function truncateAll(pool: pg.Pool): Promise<void> {
   await pool.query(
-    "TRUNCATE users, devices, telegram_users, access_codes, payment_orders, balance_transactions, notification_outbox, broadcasts CASCADE",
+    "TRUNCATE users, devices, telegram_users, access_codes, payment_orders, balance_transactions, notification_outbox, broadcasts, referral_rewards CASCADE",
   );
   // settings и topup_presets общие для всех файлов: тест, меняющий цену устройства
   // или пресет, иначе ломает расчёт дней в соседних тестах. Возвращаем к сидовым значениям.
@@ -27,10 +27,15 @@ export async function truncateAll(pool: pg.Pool): Promise<void> {
       ('min_topup', '100'),
       ('reminder_threshold_days', '3'),
       ('max_devices_default', '5'),
-      ('device_code_ttl_minutes', '30')
+      ('device_code_ttl_minutes', '30'),
+      ('referral_invitee_bonus', '50'),
+      ('referral_inviter_bonus', '30'),
+      ('referral_commission_percent', '20')
     ) AS v(key, value)
     WHERE settings.key = v.key
   `);
+  await pool.query(
+    "UPDATE settings SET value = to_jsonb(''::text) WHERE key IN ('support_contact','bot_username')");
   await pool.query("TRUNCATE topup_presets");
   await pool.query(
     `INSERT INTO topup_presets(amount, title, sort_order)

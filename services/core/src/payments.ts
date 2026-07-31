@@ -1,6 +1,7 @@
 import type pg from "pg";
+import { ensureAccountForTelegram } from "./accounts.js";
 import { applyBalanceChange } from "./ledger.js";
-import { getSetting } from "./settings.js";
+import { payReferralCommission } from "./referral.js";
 
 export type PaymentResult =
   | { kind: "credited"; userId: string; balanceAfter: string }
@@ -32,18 +33,7 @@ async function ensureAccount(c: pg.PoolClient, order: {
   if (order.user_id) return order.user_id;
   if (!order.telegram_user_id) return null;
 
-  const { rows: [tg] } = await c.query(
-    "SELECT user_id FROM telegram_users WHERE id=$1 FOR UPDATE", [order.telegram_user_id]);
-  let userId: string | null = tg?.user_id ?? null;
-
-  if (!userId) {
-    const maxDevices = await getSetting(c, "max_devices_default");
-    const { rows: [created] } = await c.query(
-      "INSERT INTO users (max_devices) VALUES ($1) RETURNING id", [maxDevices || 5]);
-    userId = created.id as string;
-    await c.query("UPDATE telegram_users SET user_id=$1 WHERE id=$2", [userId, order.telegram_user_id]);
-  }
-
+  const userId = await ensureAccountForTelegram(c, order.telegram_user_id);
   await c.query("UPDATE payment_orders SET user_id=$1 WHERE id=$2", [userId, order.id]);
   return userId;
 }
@@ -72,6 +62,13 @@ export async function processSuccessfulPayment(
        JSON.stringify({ amount: order.amount, balance: balanceAfter })],
     );
   }
+
+  // процент пригласившему — в той же транзакции, что и сам платёж
+  await payReferralCommission(c, {
+    payerTelegramUserId: order.telegram_user_id,
+    amountRub: Number(order.amount),
+    orderId: invId,
+  });
 
   return { kind: "credited", userId, balanceAfter };
 }

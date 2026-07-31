@@ -2,13 +2,22 @@ import express from "express";
 import type pg from "pg";
 import { pool as defaultPool, withTxOn } from "./db.js";
 import { generateCode, hashCode, normalizeCode } from "./codes.js";
+import { referralStats } from "./referral.js";
 import { validateInitData } from "./webapp-auth.js";
 import { createTopupOrder } from "./payments.js";
 import { buildPaymentUrl, type RobokassaCreds } from "./robokassa.js";
 import { daysLeft } from "./templates.js";
 
 const MAX_TOPUP_RUB = 100_000;
-const MINIAPP_PATHS = ["/api/me", "/api/presets", "/api/topup", "/api/history", "/api/device-code"];
+const MINIAPP_PATHS = [
+  "/api/me",
+  "/api/presets",
+  "/api/topup",
+  "/api/history",
+  "/api/device-code",
+  "/api/referral",
+  "/api/support",
+];
 
 interface AuthedRequest extends express.Request {
   tgUserId?: string;
@@ -139,6 +148,34 @@ export function createApiRouter(
       );
     });
     res.json({ code, expiresInMinutes: ttlMinutes });
+  });
+
+  /** Реферальная программа: ссылка, статистика и текущие условия. */
+  router.get("/api/referral", async (req: AuthedRequest, res, next) => {
+    try {
+      const stats = await referralStats(db, req.tgUserId!);
+      res.json({
+        ...stats,
+        inviteeBonus: await getSetting(db, "referral_invitee_bonus"),
+        inviterBonus: await getSetting(db, "referral_inviter_bonus"),
+        commissionPercent: await getSetting(db, "referral_commission_percent"),
+      });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  /** Справка и контакт поддержки — редактируются в админке. */
+  router.get("/api/support", async (_req, res, next) => {
+    try {
+      const { rows: [tpl] } = await db.query(
+        "SELECT text_template FROM notification_templates WHERE key='help'");
+      const { rows: [contact] } = await db.query(
+        "SELECT value #>> '{}' AS text FROM settings WHERE key='support_contact'");
+      res.json({ help: tpl?.text_template ?? "", contact: contact?.text ?? "" });
+    } catch (e) {
+      next(e);
+    }
   });
 
   router.get("/api/history", async (req: AuthedRequest, res) => {

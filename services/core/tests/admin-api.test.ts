@@ -199,6 +199,47 @@ describe("blocking", () => {
   });
 });
 
+describe("удаление аккаунта", () => {
+  it("снимает пиры, чистит данные и делает telegram-профиль снова новым", async () => {
+    const { rows: [t] } = await pool.query(
+      "INSERT INTO telegram_users(telegram_id, chat_id) VALUES (77,77) RETURNING id");
+    const { rows: [inviter] } = await pool.query(
+      "INSERT INTO telegram_users(telegram_id, chat_id, referral_code) VALUES (78,78,'ABCD1234') RETURNING id");
+    const id = await makeUser(300);
+    await pool.query(
+      "UPDATE telegram_users SET user_id=$1, referred_by=$2, referred_at=now() WHERE id=$3",
+      [id, inviter.id, t.id]);
+    await pool.query(
+      "INSERT INTO balance_transactions(user_id, type, amount, balance_after) VALUES ($1,'topup',300,300)", [id]);
+    await pool.query(
+      "INSERT INTO payment_orders(telegram_user_id, user_id, amount, status) VALUES ($1,$2,300,'success')",
+      [t.id, id]);
+
+    const r = await call(`/admin/api/users/${id}`, { method: "DELETE" });
+    expect(r.status).toBe(200);
+    expect(wg.calls).toContain("delete:client-1");
+
+    const { rows: users } = await pool.query("SELECT count(*)::int AS n FROM users WHERE id=$1", [id]);
+    expect(users[0].n).toBe(0);
+    const { rows: devices } = await pool.query("SELECT count(*)::int AS n FROM devices");
+    expect(devices[0].n).toBe(0); // каскадом
+    const { rows: [tg] } = await pool.query(
+      "SELECT user_id, referred_by FROM telegram_users WHERE id=$1", [t.id]);
+    expect(tg.user_id).toBeNull();
+    expect(tg.referred_by).toBeNull(); // снова может прийти по чужой ссылке
+    const { rows: [order] } = await pool.query("SELECT user_id, amount FROM payment_orders");
+    expect(order.user_id).toBeNull(); // платёж остался для отчётности
+    expect(order.amount).toBe("300.00");
+    const { rows: tx } = await pool.query("SELECT count(*)::int AS n FROM balance_transactions");
+    expect(tx[0].n).toBe(0);
+  });
+
+  it("404 для несуществующего аккаунта", async () => {
+    expect((await call("/admin/api/users/00000000-0000-0000-0000-000000000000", { method: "DELETE" })).status)
+      .toBe(404);
+  });
+});
+
 describe("promo codes", () => {
   it("generates codes with a face value and returns them once", async () => {
     const r = await call("/admin/api/codes", { method: "POST", body: { amount: 300, count: 3 } });

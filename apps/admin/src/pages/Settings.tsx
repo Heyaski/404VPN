@@ -7,6 +7,13 @@ const LABELS: Record<string, string> = {
   reminder_threshold_days: "Напоминать за, дней",
   max_devices_default: "Устройств на аккаунт",
   device_code_ttl_minutes: "Срок кода привязки, мин",
+  referral_invitee_bonus: "Бонус пришедшему по ссылке, ₽",
+  referral_inviter_bonus: "Бонус пригласившему, ₽",
+  referral_commission_percent: "Процент с пополнений друга, %",
+};
+
+const TEXT_LABELS: Record<string, string> = {
+  support_contact: "Контакт поддержки (@username)",
 };
 
 /** Кнопки пополнения: полное редактирование — сумма, подпись, видимость, добавление, удаление. */
@@ -160,7 +167,10 @@ export function Settings() {
     api<SettingsPayload>("/settings")
       .then((r) => {
         setData(r);
-        setDraft(Object.fromEntries(r.settings.map((s) => [s.key, String(s.value)])));
+        setDraft({
+          ...Object.fromEntries(r.settings.map((s) => [s.key, String(s.value)])),
+          ...Object.fromEntries(r.textSettings.map((s) => [s.key, s.value ?? ""])),
+        });
       })
       .catch((e) => setError(e.message));
   }, []);
@@ -170,7 +180,8 @@ export function Settings() {
     setError(null);
     try {
       const payload = Object.fromEntries(
-        Object.entries(draft).map(([k, v]) => [k, Number(v.replace(",", "."))]),
+        Object.entries(draft).map(([k, v]) =>
+          k in TEXT_LABELS ? [k, v] : [k, Number(v.replace(",", "."))]),
       );
       await api("/settings", { method: "PUT", body: JSON.stringify(payload) });
       setSaved(true);
@@ -192,6 +203,17 @@ export function Settings() {
             <div className="tile-label" style={{ marginBottom: 6 }}>{LABELS[s.key] ?? s.key}</div>
             <input
               className="field-inline"
+              value={draft[s.key] ?? ""}
+              onChange={(e) => setDraft({ ...draft, [s.key]: e.target.value })}
+            />
+          </div>
+        ))}
+        {data.textSettings.map((s) => (
+          <div key={s.key} style={{ marginBottom: 12 }}>
+            <div className="tile-label" style={{ marginBottom: 6 }}>{TEXT_LABELS[s.key] ?? s.key}</div>
+            <input
+              className="field-inline"
+              style={{ width: 220 }}
               value={draft[s.key] ?? ""}
               onChange={(e) => setDraft({ ...draft, [s.key]: e.target.value })}
             />

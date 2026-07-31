@@ -11,12 +11,33 @@ function StatusBadge({ status }: { status: AdminUser["status"] }) {
   return <span className={s.cls}>{s.text}</span>;
 }
 
-function UserCard({ id, onChanged }: { id: string; onChanged: () => void }) {
+function UserCard({
+  id,
+  onChanged,
+  onDeleted,
+}: {
+  id: string;
+  onChanged: () => void;
+  onDeleted: () => void;
+}) {
   const [details, setDetails] = useState<UserDetails | null>(null);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function remove() {
+    setBusy(true);
+    setError(null);
+    try {
+      await api(`/users/${id}`, { method: "DELETE" });
+      onDeleted();
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(false);
+    }
+  }
 
   const load = useCallback(() => {
     api<UserDetails>(`/users/${id}`).then(setDetails).catch((e) => setError(e.message));
@@ -106,7 +127,33 @@ function UserCard({ id, onChanged }: { id: string; onChanged: () => void }) {
               Заблокировать
             </button>
           )}
+          <button
+            className="btn-ghost"
+            style={{ borderColor: "var(--danger)", color: "var(--danger)" }}
+            disabled={busy}
+            onClick={() => setConfirmDelete(true)}
+          >
+            Удалить аккаунт
+          </button>
         </div>
+
+        {confirmDelete && (
+          <div style={{ marginTop: 14 }}>
+            <p className="muted" style={{ margin: "0 0 10px", fontSize: 13 }}>
+              Аккаунт, устройства и журнал баланса будут удалены, пиры сняты с сервера.
+              Telegram-профиль станет новым и сможет прийти по чужой реферальной ссылке.
+              Платежи останутся в отчётности. Отменить нельзя.
+            </p>
+            <div className="row-actions">
+              <button className="btn-ghost" onClick={remove} disabled={busy}>
+                Да, удалить
+              </button>
+              <button className="btn-ghost" onClick={() => setConfirmDelete(false)}>
+                Отмена
+              </button>
+            </div>
+          </div>
+        )}
         {error && <p className="error">{error}</p>}
       </div>
 
@@ -196,7 +243,14 @@ export function Users() {
         <button className="btn-ghost" style={{ alignSelf: "flex-start" }} onClick={() => setSelected(null)}>
           ← К списку
         </button>
-        <UserCard id={selected} onChanged={load} />
+        <UserCard
+          id={selected}
+          onChanged={load}
+          onDeleted={() => {
+            setSelected(null);
+            load();
+          }}
+        />
       </div>
     );
   }

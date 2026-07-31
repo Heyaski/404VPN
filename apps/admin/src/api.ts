@@ -95,6 +95,7 @@ export interface AdminPayment {
 
 export interface SettingsPayload {
   settings: { key: string; value: number }[];
+  textSettings: { key: string; value: string }[];
   presets: { id: string; amount: string; title: string; is_active: boolean; sort_order: number }[];
 }
 

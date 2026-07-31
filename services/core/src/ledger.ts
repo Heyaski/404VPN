@@ -1,6 +1,13 @@
 import type pg from "pg";
 
-export type TxType = "topup" | "daily_charge" | "code_redeem" | "admin_adjust" | "refund";
+export type TxType =
+  | "topup"
+  | "daily_charge"
+  | "code_redeem"
+  | "admin_adjust"
+  | "refund"
+  | "referral_bonus"
+  | "referral_commission";
 
 export async function applyBalanceChange(
   c: pg.PoolClient, userId: string, amountRub: number, type: TxType, meta: Record<string, unknown>,

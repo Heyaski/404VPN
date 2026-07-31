@@ -17,7 +17,13 @@ const EDITABLE_SETTINGS = [
   "reminder_threshold_days",
   "max_devices_default",
   "device_code_ttl_minutes",
+  "referral_invitee_bonus",
+  "referral_inviter_bonus",
+  "referral_commission_percent",
 ];
+
+/** Настройки-строки: сохраняются как есть, без приведения к числу. */
+const TEXT_SETTINGS = ["support_contact"];
 
 async function clientIdsOf(c: pg.PoolClient, userId: string): Promise<string[]> {
   const { rows } = await c.query(
@@ -176,6 +182,50 @@ export function createAdminRouter(
     }
   });
 
+  /**
+   * Удаление аккаунта: пиры снимаются с wg-easy, устройства и журнал баланса уходят,
+   * telegram-профиль отвязывается и очищается от реферальной привязки — после этого
+   * человек снова считается новым и может прийти по чужой ссылке.
+   * Платежи сохраняем для отчётности, просто отвязывая от аккаунта.
+   */
+  router.delete("/admin/api/users/:id", async (req, res, next) => {
+    try {
+      const { rows: devices } = await db.query(
+        "SELECT wg_client_id FROM devices WHERE user_id=$1 AND wg_client_id IS NOT NULL",
+        [req.params.id]);
+      for (const d of devices) {
+        await wg.deleteClient(d.wg_client_id).catch((e) =>
+          console.error(`не удалось снять пир ${d.wg_client_id}:`, e));
+      }
+
+      const deleted = await withTxOn(db, async (c) => {
+        const { rows: [u] } = await c.query(
+          "SELECT id FROM users WHERE id=$1 FOR UPDATE", [req.params.id]);
+        if (!u) return false;
+
+        await c.query(
+          `UPDATE telegram_users
+           SET user_id = NULL, referred_by = NULL, referred_at = NULL
+           WHERE user_id = $1`, [req.params.id]);
+        await c.query("UPDATE payment_orders SET user_id = NULL WHERE user_id = $1", [req.params.id]);
+        await c.query(
+          "UPDATE access_codes SET redeemed_by = NULL WHERE redeemed_by = $1", [req.params.id]);
+        await c.query("DELETE FROM access_codes WHERE user_id = $1", [req.params.id]);
+        await c.query("DELETE FROM balance_transactions WHERE user_id = $1", [req.params.id]);
+        await c.query("DELETE FROM users WHERE id = $1", [req.params.id]); // devices — по каскаду
+        return true;
+      });
+
+      if (!deleted) {
+        res.status(404).json({ error: "not_found" });
+        return;
+      }
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  });
+
   router.get("/admin/api/codes", async (_req, res) => {
     const { rows } = await db.query(
       `SELECT c.id, c.amount, c.status, c.expires_at, c.created_at, c.redeemed_at,
@@ -240,26 +290,36 @@ export function createAdminRouter(
   router.get("/admin/api/settings", async (_req, res) => {
     const { rows } = await db.query(
       "SELECT key, value FROM settings WHERE key = ANY($1) ORDER BY key", [EDITABLE_SETTINGS]);
+    const { rows: texts } = await db.query(
+      "SELECT key, value #>> '{}' AS value FROM settings WHERE key = ANY($1) ORDER BY key",
+      [TEXT_SETTINGS]);
     const { rows: presets } = await db.query(
       "SELECT id, amount, title, is_active, sort_order FROM topup_presets ORDER BY sort_order");
-    res.json({ settings: rows, presets });
+    res.json({ settings: rows, textSettings: texts, presets });
   });
 
   router.put("/admin/api/settings", async (req, res, next) => {
     const updates = req.body as Record<string, unknown>;
-    const entries = Object.entries(updates ?? {}).filter(([k]) => EDITABLE_SETTINGS.includes(k));
-    if (entries.length === 0) {
+    const numeric = Object.entries(updates ?? {}).filter(([k]) => EDITABLE_SETTINGS.includes(k));
+    const textual = Object.entries(updates ?? {}).filter(([k]) => TEXT_SETTINGS.includes(k));
+    if (numeric.length === 0 && textual.length === 0) {
       res.status(400).json({ error: "nothing_to_update" });
       return;
     }
     try {
       await withTxOn(db, async (c) => {
-        for (const [key, value] of entries) {
-          const numeric = Number(value);
-          if (!Number.isFinite(numeric) || numeric < 0) continue;
+        for (const [key, value] of numeric) {
+          const n = Number(value);
+          if (!Number.isFinite(n) || n < 0) continue;
           await c.query(
             "UPDATE settings SET value=$2::jsonb, updated_at=now() WHERE key=$1",
-            [key, JSON.stringify(numeric)]);
+            [key, JSON.stringify(n)]);
+        }
+        for (const [key, value] of textual) {
+          if (typeof value !== "string") continue;
+          await c.query(
+            "UPDATE settings SET value=to_jsonb($2::text), updated_at=now() WHERE key=$1",
+            [key, value.slice(0, 200)]);
         }
       });
       res.json({ ok: true });

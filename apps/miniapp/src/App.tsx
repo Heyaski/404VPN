@@ -4,6 +4,8 @@ import { Balance } from "./components/Balance";
 import { Topup } from "./components/Topup";
 import { DeviceCode } from "./components/DeviceCode";
 import { History } from "./components/History";
+import { Referral } from "./components/Referral";
+import { Support } from "./components/Support";
 
 export function App() {
   const [me, setMe] = useState<Me | null>(null);
@@ -52,6 +54,8 @@ export function App() {
       {presets && <Topup presets={presets} onCreated={load} />}
       {me && <DeviceCode linked={me.linked} />}
       {me && <History items={history} />}
+      {me?.linked && <Referral />}
+      <Support />
     </div>
   );
 }
