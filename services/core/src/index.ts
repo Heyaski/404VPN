@@ -6,7 +6,7 @@ import { createDeviceRouter } from "./device-api.js";
 import { createAdminRouter } from "./admin-api.js";
 import { createBot } from "./bot.js";
 import { createNotifyQueue, pollOutboxOnce, startNotifier } from "./notifier.js";
-import { chargeDailyOnce, remindLowBalanceOnce, reactivateEligible } from "./billing.js";
+import { chargeDailyOnce, remindLowBalanceOnce, syncAllAccess } from "./billing.js";
 import { dispatchDueBroadcasts, finishSentBroadcasts } from "./broadcasts.js";
 import { NullWgProvider, type WgProvider } from "./wg/provider.js";
 import { WgEasyProvider } from "./wg/wg-easy.js";
@@ -65,9 +65,12 @@ setInterval(() => void broadcastTick().catch(console.error), 60_000);
 async function billingTick(): Promise<void> {
   const charged = await chargeDailyOnce(pool, wg);
   const reminded = await remindLowBalanceOnce(pool);
-  const revived = await reactivateEligible(pool, wg);
-  if (charged.charged || reminded || revived)
-    console.log(`billing: charged=${charged.charged} suspended=${charged.suspended} reminded=${reminded} reactivated=${revived}`);
+  // выравниваем доступ по балансу в обе стороны: должников гасим, пополнившихся возвращаем
+  const synced = await syncAllAccess(pool, wg);
+  if (charged.charged || reminded || synced.suspended || synced.restored)
+    console.log(
+      `billing: charged=${charged.charged} suspended=${charged.suspended + synced.suspended} ` +
+        `reminded=${reminded} restored=${synced.restored}`);
 }
 void billingTick().catch(console.error);
 setInterval(() => void billingTick().catch(console.error), 3_600_000);

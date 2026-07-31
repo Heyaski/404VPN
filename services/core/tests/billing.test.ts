@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import type pg from "pg";
 import { prepareTestDb, truncateAll } from "./helpers/testdb.js";
-import { chargeDailyOnce, remindLowBalanceOnce, reactivate } from "../src/billing.js";
+import {
+  chargeDailyOnce,
+  remindLowBalanceOnce,
+  reactivate,
+  syncAccess,
+  syncAllAccess,
+} from "../src/billing.js";
 import { FakeWgProvider } from "../src/wg/fake.js";
 
 let pool: pg.Pool;
@@ -15,12 +21,17 @@ afterAll(async () => { await pool.end(); });
 async function makeUser(
   balance: number,
   devices = 1,
-  opts: { chargedDaysAgo?: number | null; withTelegram?: boolean; clientIds?: boolean } = {},
+  opts: {
+    chargedDaysAgo?: number | null;
+    withTelegram?: boolean;
+    clientIds?: boolean;
+    status?: "active" | "suspended" | "blocked";
+  } = {},
 ): Promise<string> {
   const { rows: [u] } = await pool.query(
-    `INSERT INTO users (balance, last_charged_at) VALUES ($1,
+    `INSERT INTO users (balance, status, last_charged_at) VALUES ($1, $3,
        CASE WHEN $2::int IS NULL THEN NULL ELSE (current_date - $2::int) END) RETURNING id`,
-    [balance.toFixed(2), opts.chargedDaysAgo ?? null],
+    [balance.toFixed(2), opts.chargedDaysAgo ?? null, opts.status ?? "active"],
   );
   for (let i = 0; i < devices; i++) {
     await pool.query(
@@ -123,6 +134,75 @@ describe("remindLowBalanceOnce", () => {
   it("stays quiet without devices", async () => {
     await makeUser(1, 0);
     expect(await remindLowBalanceOnce(pool)).toBe(0);
+  });
+});
+
+describe("syncAccess — доступ следует за балансом", () => {
+  it("обнуление баланса гасит пиры и ставит уведомление, даже если списание сегодня уже прошло", async () => {
+    const id = await makeUser(300, 1);
+    await chargeDailyOnce(pool, wg); // last_charged_at = сегодня
+    wg.calls.length = 0;
+    await pool.query("UPDATE users SET balance = 0 WHERE id=$1", [id]);
+
+    expect(await syncAccess(pool, wg, id)).toBe("suspended");
+    expect((await balanceOf(id)).status).toBe("suspended");
+    expect(wg.calls).toContain("disable:client-1");
+    const { rows: [ob] } = await pool.query(
+      "SELECT template_key FROM notification_outbox ORDER BY created_at DESC LIMIT 1");
+    expect(ob.template_key).toBe("suspended");
+  });
+
+  it("отрицательный баланс тоже закрывает доступ", async () => {
+    const id = await makeUser(300, 1);
+    await pool.query("UPDATE users SET balance = -50 WHERE id=$1", [id]);
+    expect(await syncAccess(pool, wg, id)).toBe("suspended");
+    expect(wg.calls).toContain("disable:client-1");
+  });
+
+  it("положительный баланс возвращает доступ и включает пиры", async () => {
+    const id = await makeUser(0, 1, { status: "suspended" });
+    await pool.query("UPDATE users SET balance = 300 WHERE id=$1", [id]);
+    expect(await syncAccess(pool, wg, id)).toBe("active");
+    expect(wg.calls).toContain("enable:client-1");
+  });
+
+  it("блокировка админом сильнее баланса", async () => {
+    const id = await makeUser(300, 1, { status: "blocked" });
+    expect(await syncAccess(pool, wg, id)).toBe("blocked");
+    expect((await balanceOf(id)).status).toBe("blocked");
+    expect(wg.calls).toContain("disable:client-1");
+  });
+
+  it("не спамит уведомлением, если доступ уже закрыт", async () => {
+    const id = await makeUser(0, 1, { status: "suspended" });
+    await syncAccess(pool, wg, id);
+    await syncAccess(pool, wg, id);
+    const { rows } = await pool.query("SELECT count(*)::int AS n FROM notification_outbox");
+    expect(rows[0].n).toBe(0); // перехода не было — уведомлять не о чем
+  });
+
+  it("закрывает доступ и без устройств (туннель по нулевому балансу не выдаётся)", async () => {
+    const id = await makeUser(0, 0);
+    expect(await syncAccess(pool, wg, id)).toBe("suspended");
+  });
+});
+
+describe("syncAllAccess — почасовое выравнивание", () => {
+  it("гасит должников и возвращает пополнившихся за один проход", async () => {
+    const debtor = await makeUser(0, 1);
+    const paid = await makeUser(300, 1, { status: "suspended" });
+    const untouched = await makeUser(300, 1);
+
+    expect(await syncAllAccess(pool, wg)).toEqual({ suspended: 1, restored: 1 });
+    expect((await balanceOf(debtor)).status).toBe("suspended");
+    expect((await balanceOf(paid)).status).toBe("active");
+    expect((await balanceOf(untouched)).status).toBe("active");
+  });
+
+  it("не трогает заблокированных", async () => {
+    const id = await makeUser(300, 1, { status: "blocked" });
+    expect(await syncAllAccess(pool, wg)).toEqual({ suspended: 0, restored: 0 });
+    expect((await balanceOf(id)).status).toBe("blocked");
   });
 });
 

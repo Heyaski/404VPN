@@ -33,7 +33,7 @@ export function createWebhookApp(
     }
     if (result.kind === "credited") {
       // деньги уже зачислены — сбой снятия приостановки не должен приводить к ретраю
-      // платежа: подстраховкой служит периодический reactivateEligible
+      // платежа: подстраховкой служит периодический syncAllAccess
       try {
         await reactivate(db, wg, result.userId);
       } catch (e) {

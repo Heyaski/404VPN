@@ -70,20 +70,13 @@ export async function chargeDailyOnce(
         c, userId, -totalRub, "daily_charge", { devices, days });
       await c.query("UPDATE users SET last_charged_at=$2::date WHERE id=$1", [userId, today]);
 
-      if (Number(balanceAfter) > 0) return { suspended: false, clientIds: [] as string[] };
-
-      await c.query("UPDATE users SET status='suspended' WHERE id=$1", [userId]);
-      await queueNotification(c, userId, "suspended", { balance: balanceAfter });
-      return { suspended: true, clientIds: await activeClientIds(c, userId) };
+      return { charged: true };
     });
 
     if (!outcome) continue;
     charged += 1;
-    if (outcome.suspended) {
-      suspended += 1;
-      // пиры отключаем после коммита — сетевой вызов не держит транзакцию
-      for (const clientId of outcome.clientIds) await wg.setEnabled(clientId, false);
-    }
+    // приведение доступа в соответствие балансу — единый путь для всех триггеров
+    if ((await syncAccess(db, wg, userId)) === "suspended") suspended += 1;
   }
 
   return { charged, suspended };
@@ -120,26 +113,73 @@ export async function remindLowBalanceOnce(db: pg.Pool, now: Date = new Date()):
 }
 
 /**
- * Подстраховка: снимает приостановку со всех, у кого баланс уже положительный.
- * Ловит случаи, когда реактивация в момент оплаты не прошла (например, wg-easy был недоступен).
+ * Приводит доступ пользователя в соответствие его балансу — в обе стороны:
+ * положительный баланс возвращает `active` и включает пиры, ноль и меньше даёт
+ * `suspended` и гасит их. Это единственное место, где меняется доступ, поэтому
+ * ручная правка баланса в админке, оплата и суточное списание ведут себя одинаково.
+ *
+ * `blocked` не трогаем: блокировка админом сильнее баланса, пиры остаются выключенными.
+ * Возвращает итоговый статус или null, если пользователя нет.
  */
-export async function reactivateEligible(db: pg.Pool, wg: WgProvider): Promise<number> {
-  const { rows } = await db.query("SELECT id FROM users WHERE status='suspended' AND balance > 0");
-  let count = 0;
-  for (const { id } of rows) if (await reactivate(db, wg, id)) count += 1;
-  return count;
-}
-
-/** Пополнили баланс — снимаем приостановку и включаем пиры обратно. */
-export async function reactivate(db: pg.Pool, wg: WgProvider, userId: string): Promise<boolean> {
-  const clientIds = await withTxOn(db, async (c) => {
+export async function syncAccess(
+  db: pg.Pool,
+  wg: WgProvider,
+  userId: string,
+): Promise<"active" | "suspended" | "blocked" | null> {
+  const outcome = await withTxOn(db, async (c) => {
     const { rows: [u] } = await c.query(
       "SELECT balance, status FROM users WHERE id=$1 FOR UPDATE", [userId]);
-    if (!u || u.status !== "suspended" || Number(u.balance) <= 0) return null;
-    await c.query("UPDATE users SET status='active' WHERE id=$1", [userId]);
-    return activeClientIds(c, userId);
+    if (!u) return null;
+
+    const desired: "active" | "suspended" | "blocked" =
+      u.status === "blocked" ? "blocked" : Number(u.balance) > 0 ? "active" : "suspended";
+
+    const changed = desired !== u.status;
+    if (changed) await c.query("UPDATE users SET status=$2 WHERE id=$1", [userId, desired]);
+    // уведомляем только на переходе — иначе почасовой проход спамил бы каждый час
+    if (changed && desired === "suspended") {
+      await queueNotification(c, userId, "suspended", { balance: u.balance });
+    }
+    return { desired, changed, clientIds: await activeClientIds(c, userId) };
   });
-  if (!clientIds) return false;
-  for (const clientId of clientIds) await wg.setEnabled(clientId, true);
-  return true;
+
+  if (!outcome) return null;
+  // сетевые вызовы — после коммита, чтобы не держать транзакцию
+  const enabled = outcome.desired === "active";
+  for (const clientId of outcome.clientIds) {
+    await wg.setEnabled(clientId, enabled).catch((e) =>
+      console.error(`не удалось ${enabled ? "включить" : "выключить"} пир ${clientId}:`, e));
+  }
+  return outcome.desired;
+}
+
+/**
+ * Почасовой проход по всем расхождениям: и должники, у которых доступ ещё открыт,
+ * и пополнившиеся, у которых он ещё закрыт. Ловит случаи, когда мгновенный вызов
+ * не прошёл — например, wg-easy был недоступен.
+ */
+export async function syncAllAccess(
+  db: pg.Pool,
+  wg: WgProvider,
+): Promise<{ suspended: number; restored: number }> {
+  const { rows } = await db.query(
+    `SELECT id, status FROM users
+     WHERE (status = 'suspended' AND balance > 0)
+        OR (status = 'active' AND balance <= 0)`);
+  let suspended = 0;
+  let restored = 0;
+  for (const { id, status } of rows) {
+    const next = await syncAccess(db, wg, id);
+    if (next === "suspended" && status === "active") suspended += 1;
+    if (next === "active" && status === "suspended") restored += 1;
+  }
+  return { suspended, restored };
+}
+
+/** Совместимость: пополнение возвращает доступ. Возвращает true, если статус изменился. */
+export async function reactivate(db: pg.Pool, wg: WgProvider, userId: string): Promise<boolean> {
+  const { rows: [before] } = await db.query("SELECT status FROM users WHERE id=$1", [userId]);
+  if (!before) return false;
+  const after = await syncAccess(db, wg, userId);
+  return after !== before.status;
 }

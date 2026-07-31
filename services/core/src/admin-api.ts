@@ -6,7 +6,7 @@ import { generateCode, hashCode, normalizeCode } from "./codes.js";
 import { applyBalanceChange } from "./ledger.js";
 import { getSetting } from "./settings.js";
 import { daysLeft } from "./templates.js";
-import { reactivate } from "./billing.js";
+import { syncAccess } from "./billing.js";
 import { countAudience, type TargetFilter } from "./broadcasts.js";
 import { createRateLimiter } from "./device-api.js";
 import type { WgProvider } from "./wg/provider.js";
@@ -137,9 +137,11 @@ export function createAdminRouter(
         res.status(404).json({ error: "not_found" });
         return;
       }
-      // пополнили заблокированному за неуплату — снимаем приостановку и включаем пиры
-      await reactivate(db, wg, req.params.id).catch((e) => console.error("reactivate failed:", e));
-      res.json({ balance: balanceAfter });
+      // доступ сразу приводим в соответствие новому балансу: обнуление гасит пиры
+      // и ставит уведомление, пополнение возвращает доступ
+      const status = await syncAccess(db, wg, req.params.id)
+        .catch((e) => { console.error("syncAccess failed:", e); return null; });
+      res.json({ balance: balanceAfter, status });
     } catch (e) {
       next(e);
     }
