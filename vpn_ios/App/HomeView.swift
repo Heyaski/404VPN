@@ -4,6 +4,7 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject private var state: AppState
     @StateObject private var vpn = VPNManager()
+    @State private var confirmingUnlink = false
 
     private var isConnected: Bool { vpn.status == .connected }
 
@@ -20,6 +21,7 @@ struct HomeView: View {
                     .foregroundStyle(isConnected ? Theme.accent : Theme.muted)
                 Spacer()
                 balanceCard
+                unlinkSection
                 if let message = state.errorMessage {
                     Text(message)
                         .font(.system(size: 13))
@@ -91,6 +93,51 @@ struct HomeView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .card()
+    }
+
+    /// Отвязка — единственный способ остановить суточное списание: плата идёт
+    /// за привязанное устройство, а не за время подключения.
+    private var unlinkSection: some View {
+        VStack(spacing: 10) {
+            if confirmingUnlink {
+                Text("Устройство отвяжется, списание за него прекратится. Чтобы вернуться, понадобится новый код из бота.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.muted)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 10) {
+                    Button("Отмена") { confirmingUnlink = false }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Theme.fgSoft)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.radius)
+                                .strokeBorder(Theme.borderStrong, lineWidth: 1))
+                    Button("Отвязать") {
+                        Task {
+                            vpn.disconnect()
+                            await state.unlinkDevice(from: vpn)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Theme.danger)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.radius)
+                            .strokeBorder(Theme.danger, lineWidth: 1))
+                }
+            } else {
+                Button("Отвязать устройство") { confirmingUnlink = true }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 14))
+                    .foregroundStyle(Theme.muted)
+            }
+        }
+        .disabled(state.isBusy)
     }
 
     private var subtitle: String {

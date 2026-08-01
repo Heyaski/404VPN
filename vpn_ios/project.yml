@@ -98,6 +98,9 @@ targets:
     settings:
       base:
         SWIFT_VERSION: "5.0"
+        # у тестового бандла нет своего Info.plist — с включённой подписью
+        # он обязателен, поэтому генерируем автоматически
+        GENERATE_INFOPLIST_FILE: YES
     dependencies:
       - target: VPN404
 

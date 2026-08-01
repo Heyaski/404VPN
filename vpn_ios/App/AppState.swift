@@ -41,12 +41,21 @@ final class AppState: ObservableObject {
         do {
             me = try await api.me()
             errorMessage = nil
-        } catch ApiError.unauthorized {
-            // устройство отозвано на сервере — возвращаемся к вводу кода
-            signOut()
         } catch {
-            errorMessage = (error as? ApiError)?.errorDescription ?? error.localizedDescription
+            handle(error)
         }
+    }
+
+    /// Единая обработка ошибок: недействительный токен всегда возвращает к вводу кода.
+    /// Устройство может быть отвязано откуда угодно — из бота, из админки, удалением
+    /// аккаунта, — и приложение не должно застревать на экране, в который уже не попасть.
+    private func handle(_ error: Error) {
+        if case ApiError.unauthorized = error {
+            signOut()
+            errorMessage = ApiError.unauthorized.errorDescription
+            return
+        }
+        errorMessage = (error as? ApiError)?.errorDescription ?? error.localizedDescription
     }
 
     /// Забирает конфигурацию туннеля и ставит её в системный профиль.
@@ -59,9 +68,21 @@ final class AppState: ObservableObject {
             try await vpn.install(config: config)
             return true
         } catch {
-            errorMessage = (error as? ApiError)?.errorDescription ?? error.localizedDescription
+            handle(error)
             return false
         }
+    }
+
+    /// Отвязывает устройство: освобождает слот и останавливает суточное списание.
+    /// Локальное состояние чистим в любом случае — если аккаунт уже удалён на сервере,
+    /// запрос вернёт 401, но на устройстве всё равно нужно вернуться к вводу кода.
+    func unlinkDevice(from vpn: VPNManager) async {
+        isBusy = true
+        defer { isBusy = false }
+        try? await api.revokeDevice()
+        await vpn.removeProfile()
+        signOut()
+        errorMessage = nil
     }
 
     func signOut() {
