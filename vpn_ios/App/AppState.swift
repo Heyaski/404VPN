@@ -99,6 +99,18 @@ final class AppState: ObservableObject {
         errorMessage = nil
     }
 
+    /// Приводит профиль в соответствие с состоянием аккаунта.
+    /// Вызывается после каждого обновления: баланс мог кончиться или пополниться,
+    /// и правила автоподключения обязаны следовать за ним.
+    func syncProfileWithAccount(vpn: VPNManager) async {
+        let preferences = Preferences.shared
+        preferences.lastBalance = me?.balance
+        await vpn.applyPreferences(autoConnect: preferences.autoConnectMode,
+                                   trustedNetworks: preferences.trustedNetworks,
+                                   killSwitch: preferences.killSwitch,
+                                   accountSuspended: me?.isSuspended == true)
+    }
+
     func signOut() {
         Keychain.clear()
         hasToken = false

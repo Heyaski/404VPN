@@ -30,6 +30,7 @@ struct DashboardView: View {
         }
         .task {
             await state.refresh()
+            await state.syncProfileWithAccount(vpn: vpn)
             stats = StatsStore.shared?.readSnapshot() ?? .empty
         }
         .task(id: vpn.status) { await pollStats() }
