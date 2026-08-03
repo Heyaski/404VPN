@@ -14,7 +14,8 @@
 - Bundle ID **не меняется**: `co.404studio.vpn`, туннель — `co.404studio.vpn.tunnel`.
 - Имена таргетов и схем Xcode (`VPN404`, `VPN404Tunnel`, `VPN404Tests`) **не меняются**. Меняется только `CFBundleDisplayName` → `Overlay`.
 - App Group — `group.co.404studio.vpn`, уже прописана в entitlements обоих таргетов.
-- Проект генерируется XcodeGen: правится `project.yml` и `project.ui.yml`, **не** `.xcodeproj`. После правки — `cd vpn_ios && xcodegen generate`.
+- Проект генерируется XcodeGen: правится `project.yml` и `project.ui.yml`, **не** `.xcodeproj`. После правки надо пересобрать **обе** спеки: `cd vpn_ios && xcodegen generate && xcodegen generate --spec project.ui.yml`. Если пересобрать только первую, тесты пойдут по устаревшему `VPN404UI.xcodeproj` и покажут зелёное там, где должно быть красное.
+- Каталог, добавленный в `sources`, должен существовать до запуска XcodeGen — иначе генерация падает с «missing source directory».
 - Два проекта: `VPN404.xcodeproj` (с туннелем, только устройство) и `VPN404UI.xcodeproj` (без туннеля, симулятор и тесты). Новые файлы в `Shared/` и `App/` надо добавлять **в оба**.
 - Тесты гоняются на симуляторе: `xcodebuild -project vpn_ios/VPN404UI.xcodeproj -scheme VPN404 -destination 'platform=iOS Simulator,name=iPhone 17' test`.
 - Тестовый бандл видит только таргет приложения (`@testable import VPN404`). Поэтому всё тестируемое лежит в `Shared/` или `App/`, но не в `Tunnel/`.
@@ -351,7 +352,7 @@ final class StatsStore {
 - [ ] **Step 8: Перегенерировать проект и прогнать тесты**
 
 ```bash
-cd vpn_ios && xcodegen generate
+cd vpn_ios && xcodegen generate && xcodegen generate --spec project.ui.yml
 ```
 
 ```bash
@@ -838,7 +839,7 @@ enum PacketTunnelProviderError: Error {
 - [ ] **Step 3: Собрать проект с туннелем**
 
 ```bash
-cd vpn_ios && xcodegen generate
+cd vpn_ios && xcodegen generate && xcodegen generate --spec project.ui.yml
 ```
 
 ```bash
@@ -1377,7 +1378,7 @@ git commit -m "feat(ios): правила автоподключения и сб�
 - [ ] **Step 3: Собрать оба проекта**
 
 ```bash
-cd vpn_ios && xcodegen generate
+cd vpn_ios && xcodegen generate && xcodegen generate --spec project.ui.yml
 ```
 
 ```bash
@@ -2037,7 +2038,7 @@ struct SettingsView: View {
 ```
 
 ```bash
-cd vpn_ios && xcodegen generate
+cd vpn_ios && xcodegen generate && xcodegen generate --spec project.ui.yml
 ```
 
 ```bash
@@ -2585,7 +2586,7 @@ git commit -m "fix(ios): при нулевом балансе автоподкл
 - [ ] **Step 2: Перегенерировать и собрать**
 
 ```bash
-cd vpn_ios && xcodegen generate
+cd vpn_ios && xcodegen generate && xcodegen generate --spec project.ui.yml
 ```
 
 ```bash
@@ -2606,7 +2607,7 @@ xcodebuild -project vpn_ios/VPN404.xcodeproj -scheme VPN404 -destination 'generi
 Бэкенд не меняется — пересобирать сервер не нужно.
 
 ```bash
-cd vpn_ios && xcodegen generate && open VPN404.xcodeproj
+cd vpn_ios && xcodegen generate && xcodegen generate --spec project.ui.yml && open VPN404.xcodeproj
 ```
 
 **Что проверить на устройстве** (симулятор ничего из этого не умеет):
