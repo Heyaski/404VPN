@@ -35,7 +35,8 @@ export async function truncateAll(pool: pg.Pool): Promise<void> {
     WHERE settings.key = v.key
   `);
   await pool.query(
-    "UPDATE settings SET value = to_jsonb(''::text) WHERE key IN ('support_contact','bot_username')");
+    `UPDATE settings SET value = to_jsonb(''::text)
+     WHERE key IN ('support_contact','bot_username','dns_default','dns_filtered')`);
   await pool.query("TRUNCATE topup_presets");
   await pool.query(
     `INSERT INTO topup_presets(amount, title, sort_order)

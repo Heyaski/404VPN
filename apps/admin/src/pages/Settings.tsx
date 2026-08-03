@@ -14,6 +14,8 @@ const LABELS: Record<string, string> = {
 
 const TEXT_LABELS: Record<string, string> = {
   support_contact: "Контакт поддержки (@username)",
+  dns_default: "DNS обычный (через запятую)",
+  dns_filtered: "DNS с фильтром рекламы (через запятую, пусто — фильтр выключен)",
 };
 
 /** Кнопки пополнения: полное редактирование — сумма, подпись, видимость, добавление, удаление. */

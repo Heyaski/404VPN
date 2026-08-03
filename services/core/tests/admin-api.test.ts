@@ -285,6 +285,20 @@ describe("settings", () => {
     expect((await call("/admin/api/settings", { method: "PUT", body: { secret: 1 } })).status).toBe(400);
   });
 
+  it("отдаёт и сохраняет адреса DNS", async () => {
+    const saved = await call("/admin/api/settings", {
+      method: "PUT",
+      body: { dns_default: "1.1.1.1, 1.0.0.1", dns_filtered: "172.18.0.53" },
+    });
+    expect(saved.status).toBe(200);
+
+    const { body } = await call("/admin/api/settings");
+    const texts = Object.fromEntries(
+      (body.textSettings as { key: string; value: string }[]).map((s) => [s.key, s.value]));
+    expect(texts.dns_default).toBe("1.1.1.1, 1.0.0.1");
+    expect(texts.dns_filtered).toBe("172.18.0.53");
+  });
+
   it("edits a topup preset", async () => {
     const { rows: [p] } = await pool.query("SELECT id FROM topup_presets ORDER BY sort_order LIMIT 1");
     expect((await call(`/admin/api/presets/${p.id}`, {

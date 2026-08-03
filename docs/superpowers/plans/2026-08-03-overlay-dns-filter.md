@@ -235,13 +235,12 @@ set -a; . ./.env; set +a; ./db/migrate.sh
 ```ts
   it("отдаёт и сохраняет адреса DNS", async () => {
     const saved = await call("/admin/api/settings", {
-      token,
       method: "PUT",
-      body: { updates: { dns_default: "1.1.1.1, 1.0.0.1", dns_filtered: "172.18.0.53" } },
+      body: { dns_default: "1.1.1.1, 1.0.0.1", dns_filtered: "172.18.0.53" },
     });
     expect(saved.status).toBe(200);
 
-    const { body } = await call("/admin/api/settings", { token });
+    const { body } = await call("/admin/api/settings");
     const texts = Object.fromEntries(
       (body.textSettings as { key: string; value: string }[]).map((s) => [s.key, s.value]));
     expect(texts.dns_default).toBe("1.1.1.1, 1.0.0.1");
@@ -273,19 +272,19 @@ const TEXT_SETTINGS = ["support_contact", "dns_default", "dns_filtered"];
 
 - [ ] **Step 6: Сбрасывать новые настройки между файлами тестов**
 
-В `services/core/tests/helpers/testdb.ts` в блоке `UPDATE settings SET value = v.value::jsonb` список значений оставить как есть — он про числовые настройки. Ниже него добавить отдельный запрос для текстовых:
+В `services/core/tests/helpers/testdb.ts` сброс текстовых настроек уже есть — достаточно дописать два ключа в существующий список. Заменить:
 
 ```ts
-  // текстовые настройки живут отдельно: значение — строка в jsonb, а не число
-  await pool.query(`
-    UPDATE settings SET value = to_jsonb(v.value::text)
-    FROM (VALUES
-      ('support_contact', ''),
-      ('dns_default', ''),
-      ('dns_filtered', '')
-    ) AS v(key, value)
-    WHERE settings.key = v.key
-  `);
+  await pool.query(
+    "UPDATE settings SET value = to_jsonb(''::text) WHERE key IN ('support_contact','bot_username')");
+```
+
+на:
+
+```ts
+  await pool.query(
+    `UPDATE settings SET value = to_jsonb(''::text)
+     WHERE key IN ('support_contact','bot_username','dns_default','dns_filtered')`);
 ```
 
 - [ ] **Step 7: Добавить подписи в админке**
