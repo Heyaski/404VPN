@@ -17,6 +17,7 @@
 - Проект генерируется XcodeGen: правится `project.yml` и `project.ui.yml`, **не** `.xcodeproj`. После правки надо пересобрать **обе** спеки: `cd vpn_ios && xcodegen generate && xcodegen generate --spec project.ui.yml`. Если пересобрать только первую, тесты пойдут по устаревшему `VPN404UI.xcodeproj` и покажут зелёное там, где должно быть красное.
 - Каталог, добавленный в `sources`, должен существовать до запуска XcodeGen — иначе генерация падает с «missing source directory».
 - Два проекта: `VPN404.xcodeproj` (с туннелем, только устройство) и `VPN404UI.xcodeproj` (без туннеля, симулятор и тесты). Новые файлы в `Shared/` и `App/` надо добавлять **в оба**.
+- Сборка проекта с туннелем из командной строки идёт с `CODE_SIGNING_ALLOWED=NO`: она проверяет, что код компилируется. Подпись и установка на устройство делаются из Xcode — `xcodebuild` в этом окружении провижининг-профили не находит.
 - Тесты гоняются на симуляторе: `xcodebuild -project vpn_ios/VPN404UI.xcodeproj -scheme VPN404 -destination 'platform=iOS Simulator,name=iPhone 17' test`.
 - Тестовый бандл видит только таргет приложения (`@testable import VPN404`). Поэтому всё тестируемое лежит в `Shared/` или `App/`, но не в `Tunnel/`.
 - Язык интерфейса и комментариев — русский, как во всём проекте.
@@ -843,7 +844,7 @@ cd vpn_ios && xcodegen generate && xcodegen generate --spec project.ui.yml
 ```
 
 ```bash
-xcodebuild -project vpn_ios/VPN404.xcodeproj -scheme VPN404 -destination 'generic/platform=iOS' build 2>&1 | tail -6
+xcodebuild -project vpn_ios/VPN404.xcodeproj -scheme VPN404 -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build 2>&1 | tail -6
 ```
 
 Ожидается `** BUILD SUCCEEDED **`. Симулятор здесь не годится — Go-мост туннеля под него не линкуется.
@@ -1382,7 +1383,7 @@ cd vpn_ios && xcodegen generate && xcodegen generate --spec project.ui.yml
 ```
 
 ```bash
-xcodebuild -project vpn_ios/VPN404.xcodeproj -scheme VPN404 -destination 'generic/platform=iOS' build 2>&1 | tail -4
+xcodebuild -project vpn_ios/VPN404.xcodeproj -scheme VPN404 -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build 2>&1 | tail -4
 ```
 
 Ожидается `** BUILD SUCCEEDED **`.
@@ -2543,7 +2544,7 @@ xcodebuild -project vpn_ios/VPN404UI.xcodeproj -scheme VPN404 -destination 'plat
 ```
 
 ```bash
-xcodebuild -project vpn_ios/VPN404.xcodeproj -scheme VPN404 -destination 'generic/platform=iOS' build 2>&1 | tail -4
+xcodebuild -project vpn_ios/VPN404.xcodeproj -scheme VPN404 -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build 2>&1 | tail -4
 ```
 
 Ожидается: 61 тест зелёный и `** BUILD SUCCEEDED **`.
@@ -2590,7 +2591,7 @@ cd vpn_ios && xcodegen generate && xcodegen generate --spec project.ui.yml
 ```
 
 ```bash
-xcodebuild -project vpn_ios/VPN404.xcodeproj -scheme VPN404 -destination 'generic/platform=iOS' build 2>&1 | tail -4
+xcodebuild -project vpn_ios/VPN404.xcodeproj -scheme VPN404 -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build 2>&1 | tail -4
 ```
 
 Ожидается `** BUILD SUCCEEDED **`.
