@@ -13,3 +13,4 @@ vpn_ios/**/*.generated.entitlements
 vpn_ios/.swiftpm/
 vpn_ios/Vendor/WireGuardKit/Sources/WireGuardKitGo/out/
 vpn_ios/Vendor/WireGuardKit/Sources/WireGuardKitGo/.tmp/
+.superpowers/
