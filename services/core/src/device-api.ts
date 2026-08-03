@@ -4,7 +4,7 @@ import { pool as defaultPool, withTxOn } from "./db.js";
 import { hashCode, normalizeCode } from "./codes.js";
 import { applyBalanceChange } from "./ledger.js";
 import { deviceAuth, generateDeviceToken, hashToken, type DeviceRequest } from "./device-auth.js";
-import { getSetting } from "./settings.js";
+import { getSetting, getTextSetting, parseDnsList } from "./settings.js";
 import { daysLeft } from "./templates.js";
 import { reactivate } from "./billing.js";
 import { WgNotConfiguredError, type WgProvider } from "./wg/provider.js";
@@ -175,15 +175,27 @@ export function createDeviceRouter(
         res.status(402).json({ error: "suspended" });
         return;
       }
+      let tunnel;
       if (row.wg_client_id) {
-        res.json(await wg.getTunnel(row.wg_client_id));
-        return;
+        tunnel = await wg.getTunnel(row.wg_client_id);
+      } else {
+        const created = await wg.createClient(`404vpn-${req.device!.id.slice(0, 8)}`);
+        await db.query(
+          "UPDATE devices SET wg_client_id=$2, wg_public_key=$3, last_seen_at=now() WHERE id=$1",
+          [req.device!.id, created.clientId, created.publicKey]);
+        tunnel = created.tunnel;
       }
-      const created = await wg.createClient(`404vpn-${req.device!.id.slice(0, 8)}`);
-      await db.query(
-        "UPDATE devices SET wg_client_id=$2, wg_public_key=$3, last_seen_at=now() WHERE id=$1",
-        [req.device!.id, created.clientId, created.publicKey]);
-      res.json(created.tunnel);
+
+      // Адреса резолверов задаются в админке. dns_default пуст — оставляем то,
+      // что отдал wg-easy; dns_filtered пуст — фильтр в приложении недоступен.
+      const dnsDefault = parseDnsList(await getTextSetting(db, "dns_default"));
+      const dnsFiltered = parseDnsList(await getTextSetting(db, "dns_filtered"));
+
+      res.json({
+        ...tunnel,
+        dns: dnsDefault.length > 0 ? dnsDefault : tunnel.dns,
+        dnsFiltered,
+      });
     } catch (e) {
       if (e instanceof WgNotConfiguredError) {
         res.status(503).json({ error: "wg_unavailable" });

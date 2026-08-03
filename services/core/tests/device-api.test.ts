@@ -235,6 +235,41 @@ describe("device endpoints", () => {
     expect((await call("/api/device/tunnel", { token, method: "POST" })).status).toBe(403);
   });
 
+  it("отдаёт пустой dnsFiltered, пока фильтр не настроен", async () => {
+    const token = await redeemNew();
+
+    const { status, body } = await call("/api/device/tunnel", { token, method: "POST" });
+
+    expect(status).toBe(200);
+    expect(body.dnsFiltered).toEqual([]);
+    expect(body.dns).toEqual(["1.1.1.1"]);
+  });
+
+  it("подставляет адреса DNS из настроек", async () => {
+    await pool.query("UPDATE settings SET value=to_jsonb($1::text) WHERE key='dns_default'",
+                     ["9.9.9.9, 149.112.112.112"]);
+    await pool.query("UPDATE settings SET value=to_jsonb($1::text) WHERE key='dns_filtered'",
+                     ["172.18.0.53"]);
+    const token = await redeemNew();
+
+    const { body } = await call("/api/device/tunnel", { token, method: "POST" });
+
+    expect(body.dns).toEqual(["9.9.9.9", "149.112.112.112"]);
+    expect(body.dnsFiltered).toEqual(["172.18.0.53"]);
+  });
+
+  it("повторный запрос туннеля тоже отдаёт оба набора", async () => {
+    await pool.query("UPDATE settings SET value=to_jsonb($1::text) WHERE key='dns_filtered'",
+                     ["172.18.0.53"]);
+    const token = await redeemNew();
+    await call("/api/device/tunnel", { token, method: "POST" });
+
+    // второй вызов идёт другой веткой кода: клиент уже создан
+    const { body } = await call("/api/device/tunnel", { token, method: "POST" });
+
+    expect(body.dnsFiltered).toEqual(["172.18.0.53"]);
+  });
+
   it("DELETE /api/device revokes the device and removes the wg client", async () => {
     const token = await redeemNew();
     await call("/api/device/tunnel", { token, method: "POST" });
