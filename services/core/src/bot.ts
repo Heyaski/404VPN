@@ -7,16 +7,11 @@ import { createTopupOrder } from "./payments.js";
 import { buildPaymentUrl } from "./robokassa.js";
 import { renderTemplate, daysLeft } from "./templates.js";
 import { applyReferral } from "./referral.js";
+import { getTextSetting } from "./settings.js";
 
 async function getSetting(key: string): Promise<number> {
   const { rows: [r] } = await pool.query("SELECT value FROM settings WHERE key=$1", [key]);
   return Number(r?.value ?? 0);
-}
-
-async function getTextSetting(key: string): Promise<string> {
-  const { rows: [r] } = await pool.query(
-    "SELECT value #>> '{}' AS text FROM settings WHERE key=$1", [key]);
-  return r?.text ?? "";
 }
 
 async function getTemplate(key: string): Promise<string> {
@@ -94,7 +89,7 @@ export function createBot(cfg: Config): Telegraf {
   });
 
   bot.command("help", async (ctx) => {
-    const support = await getTextSetting("support_contact");
+    const support = await getTextSetting(pool, "support_contact");
     const text = renderTemplate(await getTemplate("help"), {});
     await ctx.reply(support ? `${text}\n\nПоддержка: ${support}` : text);
   });
