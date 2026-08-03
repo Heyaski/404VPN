@@ -1,0 +1,58 @@
+import Foundation
+
+/// Когда приложение само поднимает туннель.
+enum AutoConnectMode: String, CaseIterable, Codable {
+    case off
+    case always
+    case cellularOnly
+    case wifiOnly
+
+    var title: String {
+        switch self {
+        case .off: return "Выключено"
+        case .always: return "Всегда"
+        case .cellularOnly: return "Только сотовая сеть"
+        case .wifiOnly: return "Только Wi-Fi"
+        }
+    }
+}
+
+/// Настройки, общие для приложения, расширения и виджетов.
+struct Preferences {
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults) { self.defaults = defaults }
+
+    static var shared: Preferences { Preferences(defaults: AppGroup.defaults ?? .standard) }
+
+    var autoConnectMode: AutoConnectMode {
+        get { AutoConnectMode(rawValue: defaults.string(forKey: Key.autoConnect) ?? "") ?? .off }
+        nonmutating set { defaults.set(newValue.rawValue, forKey: Key.autoConnect) }
+    }
+
+    /// Сети, в которых туннель поднимать не нужно. Имена вводятся вручную:
+    /// подставить текущее имя Wi-Fi мы могли бы только ценой доступа к геопозиции.
+    var trustedNetworks: [String] {
+        get { defaults.stringArray(forKey: Key.trusted) ?? [] }
+        nonmutating set { defaults.set(newValue, forKey: Key.trusted) }
+    }
+
+    /// По умолчанию выключен: includeAllNetworks ломает AirPlay, печать и локальную сеть.
+    var killSwitch: Bool {
+        get { defaults.bool(forKey: Key.killSwitch) }
+        nonmutating set { defaults.set(newValue, forKey: Key.killSwitch) }
+    }
+
+    /// Последний известный баланс — чтобы виджет показывал его без похода в сеть.
+    var lastBalance: String? {
+        get { defaults.string(forKey: Key.balance) }
+        nonmutating set { defaults.set(newValue, forKey: Key.balance) }
+    }
+
+    private enum Key {
+        static let autoConnect = "autoConnectMode"
+        static let trusted = "trustedNetworks"
+        static let killSwitch = "killSwitch"
+        static let balance = "lastBalance"
+    }
+}
