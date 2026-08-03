@@ -10,15 +10,21 @@ final class AppState: ObservableObject {
 
     let api = Api()
 
+    /// Режим съёмки экранов: данные подставлены, в сеть не ходим.
+    private let isUIPreview: Bool
+
     init() {
         #if DEBUG
-        // Позволяет снимать главный экран в симуляторе без активации кода:
+        // Позволяет снимать экраны в симуляторе без активации кода:
         // SIMCTL_CHILD_UI_PREVIEW_HOME=1 xcrun simctl launch <device> <bundle>
-        if ProcessInfo.processInfo.environment["UI_PREVIEW_HOME"] == "1" {
+        isUIPreview = ProcessInfo.processInfo.environment["UI_PREVIEW_HOME"] == "1"
+        if isUIPreview {
             hasToken = true
             me = MeResponse(balance: "300.00", status: "active", devices: 1,
                             deviceName: "iPhone", daysLeft: 90)
         }
+        #else
+        isUIPreview = false
         #endif
     }
 
@@ -38,6 +44,9 @@ final class AppState: ObservableObject {
 
     func refresh() async {
         guard hasToken else { return }
+        // В режиме съёмки реального токена нет: запрос вернул бы 401, и обработка
+        // ошибок честно выкинула бы на экран активации — снимать было бы нечего.
+        guard !isUIPreview else { return }
         do {
             me = try await api.me()
             errorMessage = nil

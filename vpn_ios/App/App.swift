@@ -6,14 +6,11 @@ struct VPN404App: App {
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if state.hasToken {
-                    HomeView()
-                } else {
-                    RedeemView()
-                }
+            if state.hasToken {
+                RootView().environmentObject(state)
+            } else {
+                RedeemView().environmentObject(state)
             }
-            .environmentObject(state)
         }
     }
 }
