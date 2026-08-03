@@ -114,7 +114,7 @@ struct DashboardView: View {
 
     private var balanceCard: some View {
         StatCard(label: "баланс") {
-            StatValue(text: state.me?.balance ?? "—", unit: "₽")
+            StatValue(text: state.me.map { TrafficFormatter.money($0.balance) } ?? "—", unit: "₽")
             Text(balanceSubtitle)
                 .font(Theme.mono(12))
                 .foregroundStyle(Theme.muted)

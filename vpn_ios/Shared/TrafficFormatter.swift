@@ -15,6 +15,11 @@ enum TrafficFormatter {
         return String(format: "%.1f", amount).replacingOccurrences(of: ".", with: ",") + " \(units[unit])"
     }
 
+    /// Бэкенд отдаёт баланс строкой вида «300.00». В русском интерфейсе разделитель — запятая.
+    static func money(_ raw: String) -> String {
+        raw.replacingOccurrences(of: ".", with: ",")
+    }
+
     static func duration(_ seconds: TimeInterval) -> String {
         let total = Int(max(0, seconds))
         let hours = total / 3600
