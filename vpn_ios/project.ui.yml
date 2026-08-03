@@ -29,6 +29,10 @@ targets:
         CFBundleDisplayName: 404VPN
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # Без объявленной локализации Locale.current схлопывается к английскому
+        # даже на русском телефоне — и даты в статистике идут не на том языке
+        CFBundleDevelopmentRegion: ru
+        CFBundleLocalizations: [ru]
         UILaunchScreen: {}
         UIUserInterfaceStyle: Dark
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
