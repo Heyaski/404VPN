@@ -65,7 +65,12 @@ final class AppState: ObservableObject {
         defer { isBusy = false }
         do {
             let config = try await api.tunnel()
-            try await vpn.install(config: config)
+            let preferences = Preferences.shared
+            try await vpn.install(config: config,
+                                  killSwitch: preferences.killSwitch,
+                                  autoConnect: preferences.autoConnectMode,
+                                  trustedNetworks: preferences.trustedNetworks,
+                                  accountSuspended: me?.isSuspended == true)
             return true
         } catch {
             handle(error)

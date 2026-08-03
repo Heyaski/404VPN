@@ -34,7 +34,15 @@ final class VPNManager: ObservableObject {
     }
 
     /// Создаёт или обновляет профиль туннеля из конфигурации, полученной с бэкенда.
-    func install(config: TunnelConfig) async throws {
+    func install(config: TunnelConfig,
+                 killSwitch: Bool,
+                 autoConnect: AutoConnectMode,
+                 trustedNetworks: [String],
+                 accountSuspended: Bool) async throws {
+        let settings = TunnelProfileBuilder.settings(config: config, killSwitch: killSwitch,
+                                                     autoConnect: autoConnect,
+                                                     accountSuspended: accountSuspended)
+
         let managers = try await NETunnelProviderManager.loadAllFromPreferences()
         let target = managers.first ?? NETunnelProviderManager()
 
@@ -43,12 +51,15 @@ final class VPNManager: ObservableObject {
         // Только для показа в системных настройках: адрес подключения система берёт
         // из конфигурации WireGuard внутри providerConfiguration, а не отсюда.
         // Поэтому здесь имя приложения, а не IP сервера.
-        proto.serverAddress = Self.displayName
+        proto.serverAddress = settings.serverAddress
+        proto.includeAllNetworks = settings.includeAllNetworks
         // Конфиг лежит в системном хранилище профиля, а не в файлах приложения
-        proto.providerConfiguration = ["wgQuickConfig": config.wgQuickConfig]
+        proto.providerConfiguration = ["wgQuickConfig": settings.wgQuickConfig]
 
         target.protocolConfiguration = proto
         target.localizedDescription = Self.displayName
+        target.onDemandRules = OnDemandRules.rules(mode: autoConnect, trustedNetworks: trustedNetworks)
+        target.isOnDemandEnabled = settings.onDemandEnabled
         target.isEnabled = true
 
         try await target.saveToPreferences()
@@ -57,6 +68,40 @@ final class VPNManager: ObservableObject {
 
         manager = target
         status = target.connection.status
+    }
+
+    /// Обновляет правила и защиту у уже установленного профиля, не трогая конфигурацию.
+    /// Нужно, когда человек поменял настройки или когда баланс ушёл в ноль.
+    func applyPreferences(autoConnect: AutoConnectMode,
+                          trustedNetworks: [String],
+                          killSwitch: Bool,
+                          accountSuspended: Bool) async {
+        guard let manager else { return }
+        (manager.protocolConfiguration as? NETunnelProviderProtocol)?.includeAllNetworks = killSwitch
+        manager.onDemandRules = OnDemandRules.rules(mode: autoConnect, trustedNetworks: trustedNetworks)
+        manager.isOnDemandEnabled = autoConnect != .off && !accountSuspended
+        try? await manager.saveToPreferences()
+        try? await manager.loadFromPreferences()
+    }
+
+    /// Спрашивает у расширения текущие счётчики. Работает только пока туннель поднят.
+    func requestStats() async -> TunnelStats? {
+        guard let session = manager?.connection as? NETunnelProviderSession,
+              let request = TunnelMessage.stats.data(using: .utf8)
+        else { return nil }
+
+        return await withCheckedContinuation { continuation in
+            do {
+                try session.sendProviderMessage(request) { response in
+                    guard let response else { return continuation.resume(returning: nil) }
+                    let decoder = JSONDecoder()
+                    decoder.dateDecodingStrategy = .iso8601
+                    continuation.resume(returning: try? decoder.decode(TunnelStats.self, from: response))
+                }
+            } catch {
+                continuation.resume(returning: nil)
+            }
+        }
     }
 
     func connect() throws {
