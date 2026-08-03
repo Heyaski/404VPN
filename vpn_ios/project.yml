@@ -21,6 +21,7 @@ targets:
     platform: iOS
     sources:
       - path: App
+      - path: Shared
       - path: Assets.xcassets
     info:
       path: App/Info.generated.plist
@@ -57,6 +58,7 @@ targets:
     platform: iOS
     sources:
       - path: Tunnel
+      - path: Shared
     info:
       path: Tunnel/Info.generated.plist
       properties:

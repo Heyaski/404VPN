@@ -21,6 +21,7 @@ targets:
     platform: iOS
     sources:
       - path: App
+      - path: Shared
       - path: Assets.xcassets
     info:
       path: App/Info.generated.plist
