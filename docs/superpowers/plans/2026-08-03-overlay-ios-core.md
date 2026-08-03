@@ -363,7 +363,7 @@ xcodebuild -project vpn_ios/VPN404UI.xcodeproj -scheme VPN404 -destination 'plat
 - [ ] **Step 9: Коммит**
 
 ```bash
-git add vpn_ios/Shared vpn_ios/Tests/StatsStoreTests.swift vpn_ios/project.yml vpn_ios/project.ui.yml vpn_ios/*.xcodeproj
+git add vpn_ios/Shared vpn_ios/Tests/StatsStoreTests.swift vpn_ios/project.yml vpn_ios/project.ui.yml
 git commit -m "feat(ios): общий контейнер, модели статистики и хранилище"
 ```
 
@@ -526,7 +526,7 @@ xcodebuild -project vpn_ios/VPN404UI.xcodeproj -scheme VPN404 -destination 'plat
 - [ ] **Step 5: Коммит**
 
 ```bash
-git add vpn_ios/Shared/RuntimeConfigParser.swift vpn_ios/Tests/RuntimeConfigParserTests.swift vpn_ios/*.xcodeproj
+git add vpn_ios/Shared/RuntimeConfigParser.swift vpn_ios/Tests/RuntimeConfigParserTests.swift
 git commit -m "feat(ios): разбор счётчиков туннеля из UAPI-строки"
 ```
 
@@ -726,7 +726,7 @@ xcodebuild -project vpn_ios/VPN404UI.xcodeproj -scheme VPN404 -destination 'plat
 - [ ] **Step 5: Коммит**
 
 ```bash
-git add vpn_ios/Shared/StatsCollector.swift vpn_ios/Tests/StatsCollectorTests.swift vpn_ios/*.xcodeproj
+git add vpn_ios/Shared/StatsCollector.swift vpn_ios/Tests/StatsCollectorTests.swift
 git commit -m "feat(ios): коллектор статистики туннеля"
 ```
 
@@ -858,7 +858,7 @@ xcodebuild -project vpn_ios/VPN404UI.xcodeproj -scheme VPN404 -destination 'plat
 - [ ] **Step 5: Коммит**
 
 ```bash
-git add vpn_ios/Tunnel/PacketTunnelProvider.swift vpn_ios/Shared/TunnelMessage.swift vpn_ios/*.xcodeproj
+git add vpn_ios/Tunnel/PacketTunnelProvider.swift vpn_ios/Shared/TunnelMessage.swift
 git commit -m "feat(ios): расширение туннеля ведёт статистику и отвечает приложению"
 ```
 
@@ -1023,7 +1023,7 @@ xcodebuild -project vpn_ios/VPN404UI.xcodeproj -scheme VPN404 -destination 'plat
 - [ ] **Step 5: Коммит**
 
 ```bash
-git add vpn_ios/Shared/Preferences.swift vpn_ios/Tests/PreferencesTests.swift vpn_ios/*.xcodeproj
+git add vpn_ios/Shared/Preferences.swift vpn_ios/Tests/PreferencesTests.swift
 git commit -m "feat(ios): общие настройки автоподключения и защиты"
 ```
 
@@ -1255,7 +1255,7 @@ xcodebuild -project vpn_ios/VPN404UI.xcodeproj -scheme VPN404 -destination 'plat
 - [ ] **Step 7: Коммит**
 
 ```bash
-git add vpn_ios/App/OnDemandRules.swift vpn_ios/App/TunnelProfileBuilder.swift vpn_ios/Tests/OnDemandRulesTests.swift vpn_ios/Tests/TunnelProfileBuilderTests.swift vpn_ios/*.xcodeproj
+git add vpn_ios/App/OnDemandRules.swift vpn_ios/App/TunnelProfileBuilder.swift vpn_ios/Tests/OnDemandRulesTests.swift vpn_ios/Tests/TunnelProfileBuilderTests.swift
 git commit -m "feat(ios): правила автоподключения и сборка профиля туннеля"
 ```
 
@@ -1397,7 +1397,7 @@ xcodebuild -project vpn_ios/VPN404UI.xcodeproj -scheme VPN404 -destination 'plat
 - [ ] **Step 5: Коммит**
 
 ```bash
-git add vpn_ios/App/VPNManager.swift vpn_ios/App/AppState.swift vpn_ios/*.xcodeproj
+git add vpn_ios/App/VPNManager.swift vpn_ios/App/AppState.swift
 git commit -m "feat(ios): применение правил автоподключения и запрос счётчиков по IPC"
 ```
 
@@ -1564,7 +1564,7 @@ xcodebuild -project vpn_ios/VPN404UI.xcodeproj -scheme VPN404 -destination 'plat
 - [ ] **Step 6: Коммит**
 
 ```bash
-git add vpn_ios/Shared/TrafficFormatter.swift vpn_ios/App/Components/StatCard.swift vpn_ios/Tests/TrafficFormatterTests.swift vpn_ios/*.xcodeproj
+git add vpn_ios/Shared/TrafficFormatter.swift vpn_ios/App/Components/StatCard.swift vpn_ios/Tests/TrafficFormatterTests.swift
 git commit -m "feat(ios): форматирование трафика и карточки приборной панели"
 ```
 
@@ -1738,7 +1738,7 @@ xcodebuild -project vpn_ios/VPN404UI.xcodeproj -scheme VPN404 -destination 'plat
 - [ ] **Step 5: Коммит**
 
 ```bash
-git add vpn_ios/Shared/StatsAggregator.swift vpn_ios/Tests/StatsAggregatorTests.swift vpn_ios/*.xcodeproj
+git add vpn_ios/Shared/StatsAggregator.swift vpn_ios/Tests/StatsAggregatorTests.swift
 git commit -m "feat(ios): агрегация статистики по дням и периодам"
 ```
 
@@ -2049,7 +2049,7 @@ xcodebuild -project vpn_ios/VPN404UI.xcodeproj -scheme VPN404 -destination 'plat
 - [ ] **Step 6: Коммит**
 
 ```bash
-git add vpn_ios/App/Screens vpn_ios/App/App.swift vpn_ios/*.xcodeproj
+git add vpn_ios/App/Screens vpn_ios/App/App.swift
 git commit -m "feat(ios): вкладки и дашборд вместо экрана с круглой кнопкой"
 ```
 
@@ -2223,7 +2223,7 @@ xcrun simctl boot "iPhone 17" 2>/dev/null; xcrun simctl install booted ~/Library
 - [ ] **Step 5: Коммит**
 
 ```bash
-git add vpn_ios/App/Screens/StatsView.swift vpn_ios/App/Components/TrafficChart.swift vpn_ios/*.xcodeproj
+git add vpn_ios/App/Screens/StatsView.swift vpn_ios/App/Components/TrafficChart.swift
 git commit -m "feat(ios): экран статистики с графиком и историей сессий"
 ```
 
@@ -2432,7 +2432,7 @@ xcodebuild -project vpn_ios/VPN404UI.xcodeproj -scheme VPN404 -destination 'plat
 - [ ] **Step 3: Коммит**
 
 ```bash
-git add vpn_ios/App/Screens/SettingsView.swift vpn_ios/*.xcodeproj
+git add vpn_ios/App/Screens/SettingsView.swift
 git commit -m "feat(ios): экран настроек с автоподключением, kill switch и отвязкой"
 ```
 
@@ -2550,7 +2550,7 @@ xcodebuild -project vpn_ios/VPN404.xcodeproj -scheme VPN404 -destination 'generi
 - [ ] **Step 6: Коммит**
 
 ```bash
-git add vpn_ios/App/AppState.swift vpn_ios/App/Screens/DashboardView.swift vpn_ios/Tests/SuspendedAccountTests.swift vpn_ios/*.xcodeproj
+git add vpn_ios/App/AppState.swift vpn_ios/App/Screens/DashboardView.swift vpn_ios/Tests/SuspendedAccountTests.swift
 git commit -m "fix(ios): при нулевом балансе автоподключение снимается"
 ```
 
@@ -2635,7 +2635,7 @@ cd services/core && npm test 2>&1 | tail -5
 - [ ] **Step 5: Коммит**
 
 ```bash
-git add vpn_ios/project.yml vpn_ios/project.ui.yml vpn_ios/*.xcodeproj docs/DEPLOY.md
+git add vpn_ios/project.yml vpn_ios/project.ui.yml docs/DEPLOY.md
 git commit -m "feat(ios): приложение называется Overlay"
 ```
 
