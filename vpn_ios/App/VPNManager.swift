@@ -5,6 +5,9 @@ import NetworkExtension
 /// поднимает и опускает соединение, следит за статусом.
 @MainActor
 final class VPNManager: ObservableObject {
+    /// Имя профиля в «Настройки → Основные → VPN и управление устройством».
+    static let displayName = "Overlay"
+
     @Published private(set) var status: NEVPNStatus = .invalid
 
     private var manager: NETunnelProviderManager?
@@ -37,12 +40,15 @@ final class VPNManager: ObservableObject {
 
         let proto = NETunnelProviderProtocol()
         proto.providerBundleIdentifier = "co.404studio.vpn.tunnel"
-        proto.serverAddress = config.peer.endpoint
+        // Только для показа в системных настройках: адрес подключения система берёт
+        // из конфигурации WireGuard внутри providerConfiguration, а не отсюда.
+        // Поэтому здесь имя приложения, а не IP сервера.
+        proto.serverAddress = Self.displayName
         // Конфиг лежит в системном хранилище профиля, а не в файлах приложения
         proto.providerConfiguration = ["wgQuickConfig": config.wgQuickConfig]
 
         target.protocolConfiguration = proto
-        target.localizedDescription = "404VPN"
+        target.localizedDescription = Self.displayName
         target.isEnabled = true
 
         try await target.saveToPreferences()
