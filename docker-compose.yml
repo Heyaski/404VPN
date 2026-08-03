@@ -58,6 +58,22 @@ services:
     depends_on:
       - core
     restart: unless-stopped
+  adguard:
+    image: adguard/adguardhome:latest
+    volumes:
+      - adguard_work:/opt/adguardhome/work
+      - adguard_conf:/opt/adguardhome/conf
+    # Веб-интерфейс только на loopback — открывается через SSH-туннель.
+    # Порт 53 наружу НЕ публикуется: открытый резолвер за сутки находят
+    # и начинают использовать для усиления DDoS-атак.
+    ports:
+      - "127.0.0.1:3000:3000"
+    # Статический адрес в сети wg-easy: динамический уедет при перезапуске,
+    # и фильтр отвалится у всех клиентов, потому что адрес зашит в их конфиг.
+    networks:
+      wgnet:
+        ipv4_address: ${ADGUARD_IP:?set ADGUARD_IP in .env}
+    restart: unless-stopped
 networks:
   default:
   # Сеть, в которой живёт wg-easy. Создаётся его собственным compose — здесь только
@@ -71,3 +87,5 @@ volumes:
   redisdata:
   caddy_data:
   caddy_config:
+  adguard_work:
+  adguard_conf:
