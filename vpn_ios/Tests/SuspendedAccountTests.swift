@@ -5,7 +5,7 @@ import XCTest
 /// выключенном на сервере пире оставляют человека вообще без интернета.
 final class SuspendedAccountTests: XCTestCase {
     private let config = TunnelConfig(
-        privateKey: "aaa", address: "10.8.0.5/24", dns: ["1.1.1.1"],
+        privateKey: "aaa", address: "10.8.0.5/24", dns: ["1.1.1.1"], dnsFiltered: [],
         peer: TunnelPeer(publicKey: "bbb", presharedKey: nil,
                          endpoint: "195.14.118.198:51820",
                          allowedIps: ["0.0.0.0/0"], persistentKeepalive: 25))
@@ -13,7 +13,8 @@ final class SuspendedAccountTests: XCTestCase {
     func testOnDemandStaysOffForEveryModeWhileSuspended() {
         for mode in AutoConnectMode.allCases {
             let settings = TunnelProfileBuilder.settings(config: config, killSwitch: false,
-                                                         autoConnect: mode, accountSuspended: true)
+                                                         autoConnect: mode, accountSuspended: true,
+                                                         dnsFilter: false)
             XCTAssertFalse(settings.onDemandEnabled,
                            "режим \(mode) не должен включать правила при suspended")
         }
@@ -21,9 +22,11 @@ final class SuspendedAccountTests: XCTestCase {
 
     func testOnDemandComesBackAfterTopUp() {
         let suspended = TunnelProfileBuilder.settings(config: config, killSwitch: false,
-                                                      autoConnect: .always, accountSuspended: true)
+                                                      autoConnect: .always, accountSuspended: true,
+                                                      dnsFilter: false)
         let restored = TunnelProfileBuilder.settings(config: config, killSwitch: false,
-                                                     autoConnect: .always, accountSuspended: false)
+                                                     autoConnect: .always, accountSuspended: false,
+                                                     dnsFilter: false)
 
         XCTAssertFalse(suspended.onDemandEnabled)
         XCTAssertTrue(restored.onDemandEnabled, "после пополнения правила возвращаются сами")
@@ -31,7 +34,8 @@ final class SuspendedAccountTests: XCTestCase {
 
     func testKillSwitchIsIndependentOfSuspension() {
         let settings = TunnelProfileBuilder.settings(config: config, killSwitch: true,
-                                                     autoConnect: .off, accountSuspended: true)
+                                                     autoConnect: .off, accountSuspended: true,
+                                                     dnsFilter: false)
 
         XCTAssertTrue(settings.includeAllNetworks)
     }

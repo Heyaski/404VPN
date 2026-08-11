@@ -50,7 +50,7 @@ final class TunnelConfigTests: XCTestCase {
 
     func testBuildsWgQuickConfig() throws {
         let config = try JSONDecoder().decode(TunnelConfig.self, from: json)
-        XCTAssertEqual(config.wgQuickConfig, """
+        XCTAssertEqual(config.wgQuick(filtered: false), """
         [Interface]
         PrivateKey = aPrivate=
         Address = 192.168.101.3/24
@@ -72,9 +72,9 @@ final class TunnelConfigTests: XCTestCase {
                  "allowedIps":["0.0.0.0/0"],"persistentKeepalive":null}}
         """.data(using: .utf8)!
         let config = try JSONDecoder().decode(TunnelConfig.self, from: minimal)
-        XCTAssertFalse(config.wgQuickConfig.contains("DNS"))
-        XCTAssertFalse(config.wgQuickConfig.contains("PresharedKey"))
-        XCTAssertFalse(config.wgQuickConfig.contains("PersistentKeepalive"))
+        XCTAssertFalse(config.wgQuick(filtered: false).contains("DNS"))
+        XCTAssertFalse(config.wgQuick(filtered: false).contains("PresharedKey"))
+        XCTAssertFalse(config.wgQuick(filtered: false).contains("PersistentKeepalive"))
     }
 }
 
@@ -97,5 +97,52 @@ final class ApiErrorTests: XCTestCase {
         for error in all {
             XCTAssertFalse(error.errorDescription?.isEmpty ?? true, "нет текста для \(error)")
         }
+    }
+}
+
+final class TunnelConfigDnsTests: XCTestCase {
+    private func config(dns: [String], filtered: [String]) -> TunnelConfig {
+        TunnelConfig(privateKey: "priv", address: "10.8.0.5/24", dns: dns, dnsFiltered: filtered,
+                     peer: TunnelPeer(publicKey: "pub", presharedKey: nil,
+                                      endpoint: "1.2.3.4:51820",
+                                      allowedIps: ["0.0.0.0/0"], persistentKeepalive: 25))
+    }
+
+    func testPlainConfigUsesDefaultResolvers() {
+        let text = config(dns: ["1.1.1.1"], filtered: ["10.8.0.53"]).wgQuick(filtered: false)
+
+        XCTAssertTrue(text.contains("DNS = 1.1.1.1"))
+        XCTAssertFalse(text.contains("10.8.0.53"))
+    }
+
+    func testFilteredConfigUsesFilteringResolvers() {
+        let text = config(dns: ["1.1.1.1"], filtered: ["10.8.0.53"]).wgQuick(filtered: true)
+
+        XCTAssertTrue(text.contains("DNS = 10.8.0.53"))
+        XCTAssertFalse(text.contains("1.1.1.1"))
+    }
+
+    func testFilterUnavailableFallsBackToDefault() {
+        let text = config(dns: ["1.1.1.1"], filtered: []).wgQuick(filtered: true)
+
+        XCTAssertTrue(text.contains("DNS = 1.1.1.1"),
+                      "фильтр не настроен на сервере — подключение всё равно должно состояться")
+    }
+
+    func testFilterAvailability() {
+        XCTAssertTrue(config(dns: ["1.1.1.1"], filtered: ["10.8.0.53"]).isFilterAvailable)
+        XCTAssertFalse(config(dns: ["1.1.1.1"], filtered: []).isFilterAvailable)
+    }
+
+    func testDecodesResponseWithoutDnsFiltered() throws {
+        let json = """
+        {"privateKey":"p","address":"10.8.0.5/24","dns":["1.1.1.1"],
+         "peer":{"publicKey":"pub","presharedKey":null,"endpoint":"1.2.3.4:51820",
+                 "allowedIps":["0.0.0.0/0"],"persistentKeepalive":25}}
+        """.data(using: .utf8)!
+
+        let decoded = try JSONDecoder().decode(TunnelConfig.self, from: json)
+
+        XCTAssertEqual(decoded.dnsFiltered, [], "старый сервер без поля не должен ломать разбор")
     }
 }

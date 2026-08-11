@@ -49,10 +49,26 @@ struct Preferences {
         nonmutating set { defaults.set(newValue, forKey: Key.balance) }
     }
 
+    /// Включён ли фильтр рекламы и трекеров.
+    var dnsFilter: Bool {
+        get { defaults.bool(forKey: Key.dnsFilter) }
+        nonmutating set { defaults.set(newValue, forKey: Key.dnsFilter) }
+    }
+
+    /// Настроен ли фильтр на сервере. Запоминается при получении конфигурации,
+    /// чтобы экран настроек знал о доступности ещё до первого подключения
+    /// после запуска приложения.
+    var dnsFilterAvailable: Bool {
+        get { defaults.bool(forKey: Key.dnsFilterAvailable) }
+        nonmutating set { defaults.set(newValue, forKey: Key.dnsFilterAvailable) }
+    }
+
     private enum Key {
         static let autoConnect = "autoConnectMode"
         static let trusted = "trustedNetworks"
         static let killSwitch = "killSwitch"
         static let balance = "lastBalance"
+        static let dnsFilter = "dnsFilter"
+        static let dnsFilterAvailable = "dnsFilterAvailable"
     }
 }

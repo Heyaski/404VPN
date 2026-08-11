@@ -8,16 +8,25 @@ struct TunnelPeer: Codable, Equatable {
     let persistentKeepalive: Int?
 }
 
-struct TunnelConfig: Codable, Equatable {
+struct TunnelConfig: Equatable {
     let privateKey: String
     let address: String
+    /// Обычные резолверы.
     let dns: [String]
+    /// Резолверы с фильтром рекламы. Пусто — фильтр на сервере не настроен.
+    let dnsFiltered: [String]
     let peer: TunnelPeer
 
+    var isFilterAvailable: Bool { !dnsFiltered.isEmpty }
+
     /// Текст в формате wg-quick — именно его понимает WireGuardKit.
-    var wgQuickConfig: String {
+    /// Фильтр никогда не мешает подключению: если он не настроен на сервере,
+    /// молча берём обычные резолверы.
+    func wgQuick(filtered: Bool) -> String {
+        let resolvers = filtered && isFilterAvailable ? dnsFiltered : dns
+
         var lines = ["[Interface]", "PrivateKey = \(privateKey)", "Address = \(address)"]
-        if !dns.isEmpty { lines.append("DNS = \(dns.joined(separator: ", "))") }
+        if !resolvers.isEmpty { lines.append("DNS = \(resolvers.joined(separator: ", "))") }
         lines.append("")
         lines.append("[Peer]")
         lines.append("PublicKey = \(peer.publicKey)")
@@ -28,6 +37,23 @@ struct TunnelConfig: Codable, Equatable {
             lines.append("PersistentKeepalive = \(keepalive)")
         }
         return lines.joined(separator: "\n")
+    }
+}
+
+/// Разбор вынесен в расширение, чтобы у структуры остался обычный инициализатор:
+/// он нужен тестам. Поле dnsFiltered необязательное — сервер мог быть не обновлён.
+extension TunnelConfig: Codable {
+    enum CodingKeys: String, CodingKey {
+        case privateKey, address, dns, dnsFiltered, peer
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        privateKey = try c.decode(String.self, forKey: .privateKey)
+        address = try c.decode(String.self, forKey: .address)
+        dns = try c.decode([String].self, forKey: .dns)
+        dnsFiltered = try c.decodeIfPresent([String].self, forKey: .dnsFiltered) ?? []
+        peer = try c.decode(TunnelPeer.self, forKey: .peer)
     }
 }
 

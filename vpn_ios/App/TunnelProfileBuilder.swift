@@ -14,11 +14,12 @@ enum TunnelProfileBuilder {
     static func settings(config: TunnelConfig,
                          killSwitch: Bool,
                          autoConnect: AutoConnectMode,
-                         accountSuspended: Bool) -> TunnelProfileSettings {
+                         accountSuspended: Bool,
+                         dnsFilter: Bool) -> TunnelProfileSettings {
         TunnelProfileSettings(
             // поле только для показа: адрес подключения система берёт из конфигурации WireGuard
             serverAddress: VPNManager.displayName,
-            wgQuickConfig: config.wgQuickConfig,
+            wgQuickConfig: config.wgQuick(filtered: dnsFilter),
             includeAllNetworks: killSwitch,
             // при исчерпанном балансе сервер выключает пир: туннель не поднимется никогда,
             // а правила будут блокировать трафик — человек останется вообще без интернета

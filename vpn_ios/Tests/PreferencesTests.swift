@@ -51,6 +51,22 @@ final class PreferencesTests: XCTestCase {
         XCTAssertEqual(Preferences(defaults: defaults).lastBalance, "412.50")
     }
 
+    func testDnsFilterIsOffByDefault() {
+        XCTAssertFalse(preferences.dnsFilter)
+    }
+
+    func testDnsFilterRoundTrip() {
+        preferences.dnsFilter = true
+
+        XCTAssertTrue(Preferences(defaults: defaults).dnsFilter)
+    }
+
+    func testDnsFilterAvailabilityRoundTrip() {
+        preferences.dnsFilterAvailable = true
+
+        XCTAssertTrue(Preferences(defaults: defaults).dnsFilterAvailable)
+    }
+
     func testEveryModeHasTitle() {
         for mode in AutoConnectMode.allCases {
             XCTAssertFalse(mode.title.isEmpty, "\(mode) без названия")

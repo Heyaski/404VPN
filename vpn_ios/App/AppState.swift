@@ -75,11 +75,15 @@ final class AppState: ObservableObject {
         do {
             let config = try await api.tunnel()
             let preferences = Preferences.shared
+            // сервер мог настроить или убрать фильтр — запоминаем, чтобы экран
+            // настроек знал о доступности ещё до следующего подключения
+            preferences.dnsFilterAvailable = config.isFilterAvailable
             try await vpn.install(config: config,
                                   killSwitch: preferences.killSwitch,
                                   autoConnect: preferences.autoConnectMode,
                                   trustedNetworks: preferences.trustedNetworks,
-                                  accountSuspended: me?.isSuspended == true)
+                                  accountSuspended: me?.isSuspended == true,
+                                  dnsFilter: preferences.dnsFilter && config.isFilterAvailable)
             return true
         } catch {
             handle(error)

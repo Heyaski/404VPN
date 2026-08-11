@@ -38,10 +38,12 @@ final class VPNManager: ObservableObject {
                  killSwitch: Bool,
                  autoConnect: AutoConnectMode,
                  trustedNetworks: [String],
-                 accountSuspended: Bool) async throws {
+                 accountSuspended: Bool,
+                 dnsFilter: Bool) async throws {
         let settings = TunnelProfileBuilder.settings(config: config, killSwitch: killSwitch,
                                                      autoConnect: autoConnect,
-                                                     accountSuspended: accountSuspended)
+                                                     accountSuspended: accountSuspended,
+                                                     dnsFilter: dnsFilter)
 
         let managers = try await NETunnelProviderManager.loadAllFromPreferences()
         let target = managers.first ?? NETunnelProviderManager()
