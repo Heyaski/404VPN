@@ -10,6 +10,8 @@ struct SettingsView: View {
     @State private var killSwitch: Bool = Preferences.shared.killSwitch
     @State private var newNetwork = ""
     @State private var confirmingUnlink = false
+    @State private var dnsFilter: Bool = Preferences.shared.dnsFilter
+    @State private var switchingFilter = false
 
     var body: some View {
         ZStack {
@@ -119,6 +121,28 @@ struct SettingsView: View {
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.muted)
                 .fixedSize(horizontal: false, vertical: true)
+
+            Divider().overlay(Theme.border).padding(.vertical, 4)
+
+            Toggle("Блокировать рекламу и трекеры", isOn: $dnsFilter)
+                .font(.system(size: 14))
+                .tint(Theme.accent)
+                .disabled(!Preferences.shared.dnsFilterAvailable || switchingFilter)
+                .onChange(of: dnsFilter) { _ in Task { await applyDnsFilter() } }
+
+            if Preferences.shared.dnsFilterAvailable {
+                Text(switchingFilter
+                     ? "Переподключаем туннель…"
+                     : "Реклама и трекеры отсекаются на уровне DNS. Переключение меняет настройки соединения, поэтому туннель на пару секунд переподключится.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(switchingFilter ? Theme.accent : Theme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("Фильтр пока не настроен на сервере.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
@@ -180,6 +204,18 @@ struct SettingsView: View {
                 .foregroundStyle(Theme.muted)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    /// Фильтр меняет адреса DNS, а они входят в конфигурацию WireGuard —
+    /// значит профиль надо переустановить, а поднятый туннель переподключить.
+    private func applyDnsFilter() async {
+        Preferences.shared.dnsFilter = dnsFilter
+        guard vpn.status == .connected else { return }
+        switchingFilter = true
+        defer { switchingFilter = false }
+        vpn.disconnect()
+        guard await state.installTunnel(into: vpn) else { return }
+        try? vpn.connect()
     }
 
     /// Сохраняет настройки и сразу применяет их к профилю — иначе изменения

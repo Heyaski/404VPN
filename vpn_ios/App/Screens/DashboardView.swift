@@ -108,9 +108,15 @@ struct DashboardView: View {
             MiniStat(label: "автовкл",
                      value: Preferences.shared.autoConnectMode.title,
                      tint: Preferences.shared.autoConnectMode == .off ? Theme.muted : Theme.accent)
-            MiniStat(label: "принято",
-                     value: TrafficFormatter.bytes(stats.rxBytes))
+            MiniStat(label: "фильтр",
+                     value: filterLabel,
+                     tint: Preferences.shared.dnsFilter ? Theme.accent : Theme.muted)
         }
+    }
+
+    private var filterLabel: String {
+        guard Preferences.shared.dnsFilterAvailable else { return "недоступен" }
+        return Preferences.shared.dnsFilter ? "включён" : "выключен"
     }
 
     private var balanceCard: some View {
