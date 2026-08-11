@@ -9,6 +9,8 @@ import { createNotifyQueue, pollOutboxOnce, startNotifier } from "./notifier.js"
 import { chargeDailyOnce, remindLowBalanceOnce, syncAllAccess } from "./billing.js";
 import { dispatchDueBroadcasts, finishSentBroadcasts } from "./broadcasts.js";
 import { NullWgProvider, type WgProvider } from "./wg/provider.js";
+import { importBypassPrefixes } from "./bypass/import.js";
+import { RipeStatSource } from "./bypass/ripestat.js";
 import { WgEasyProvider } from "./wg/wg-easy.js";
 
 const cfg = loadConfig();
@@ -87,6 +89,16 @@ async function billingTick(): Promise<void> {
 }
 void billingTick().catch(console.error);
 setInterval(() => void billingTick().catch(console.error), 3_600_000);
+
+const prefixSource = new RipeStatSource();
+
+async function bypassTick(): Promise<void> {
+  const { asns, prefixes } = await importBypassPrefixes(pool, prefixSource);
+  if (asns > 0) console.log(`обход: ${prefixes} префиксов из ${asns} автономных систем`);
+}
+// раз в сутки; первый прогон — через минуту после старта, чтобы не задерживать подъём
+setTimeout(() => void bypassTick().catch(console.error), 60_000);
+setInterval(() => void bypassTick().catch(console.error), 86_400_000);
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
