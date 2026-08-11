@@ -16,8 +16,11 @@ const TEXT_LABELS: Record<string, string> = {
   support_contact: "Контакт поддержки (@username)",
   dns_default: "DNS обычный (через запятую)",
   dns_filtered: "DNS с фильтром рекламы (через запятую, пусто — фильтр выключен)",
-  bypass_asns: "Номера AS в обход туннеля (через запятую; НЕ операторов связи — у них тысячи префиксов)",
+  bypass_asns: "Номера AS в обход туннеля (по одному на строку; НЕ операторов связи — у них тысячи префиксов)",
 };
+
+/** Настройки, которые ведут списком: им нужно поле в несколько строк, а не одна. */
+const MULTILINE = new Set(["bypass_asns"]);
 
 /** Кнопки пополнения: полное редактирование — сумма, подпись, видимость, добавление, удаление. */
 function PresetsCard({
@@ -214,12 +217,22 @@ export function Settings() {
         {data.textSettings.map((s) => (
           <div key={s.key} style={{ marginBottom: 12 }}>
             <div className="tile-label" style={{ marginBottom: 6 }}>{TEXT_LABELS[s.key] ?? s.key}</div>
-            <input
-              className="field-inline"
-              style={{ width: 220 }}
-              value={draft[s.key] ?? ""}
-              onChange={(e) => setDraft({ ...draft, [s.key]: e.target.value })}
-            />
+            {MULTILINE.has(s.key) ? (
+              <textarea
+                className="field-inline"
+                style={{ width: "100%", minHeight: 120, fontFamily: "ui-monospace, monospace" }}
+                placeholder={"AS44386\nAS207986"}
+                value={draft[s.key] ?? ""}
+                onChange={(e) => setDraft({ ...draft, [s.key]: e.target.value })}
+              />
+            ) : (
+              <input
+                className="field-inline"
+                style={{ width: "100%" }}
+                value={draft[s.key] ?? ""}
+                onChange={(e) => setDraft({ ...draft, [s.key]: e.target.value })}
+              />
+            )}
           </div>
         ))}
         <button className="btn-primary" onClick={save}>{saved ? "Сохранено" : "Сохранить"}</button>

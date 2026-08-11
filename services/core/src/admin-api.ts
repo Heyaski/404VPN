@@ -24,6 +24,8 @@ const EDITABLE_SETTINGS = [
 
 /** Настройки-строки: сохраняются как есть, без приведения к числу. */
 const TEXT_SETTINGS = ["support_contact", "dns_default", "dns_filtered", "bypass_asns"];
+/** Хватает на несколько сотен номеров AS. Ограничение нужно только от случайной вставки романа. */
+const TEXT_SETTING_MAX_LENGTH = 4000;
 
 async function clientIdsOf(c: pg.PoolClient, userId: string): Promise<string[]> {
   const { rows } = await c.query(
@@ -319,7 +321,9 @@ export function createAdminRouter(
           if (typeof value !== "string") continue;
           await c.query(
             "UPDATE settings SET value=to_jsonb($2::text), updated_at=now() WHERE key=$1",
-            [key, value.slice(0, 200)]);
+            // 200 символов не хватало на список номеров AS, а обрезка попадала
+            // в середину номера и превращала его в чужой, но валидный
+            [key, value.slice(0, TEXT_SETTING_MAX_LENGTH)]);
         }
       });
       res.json({ ok: true });

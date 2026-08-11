@@ -285,6 +285,20 @@ describe("settings", () => {
     expect((await call("/admin/api/settings", { method: "PUT", body: { secret: 1 } })).status).toBe(400);
   });
 
+  it("сохраняет длинный список номеров AS целиком", async () => {
+    // прежний предел в 200 символов резал список посередине номера,
+    // превращая AS44386 в валидный, но чужой AS44
+    const asns = Array.from({ length: 60 }, (_, i) => `AS${200000 + i}`).join("\n");
+    expect(asns.length).toBeGreaterThan(200);
+
+    await call("/admin/api/settings", { method: "PUT", body: { bypass_asns: asns } });
+
+    const { body } = await call("/admin/api/settings");
+    const saved = (body.textSettings as { key: string; value: string }[])
+      .find((s) => s.key === "bypass_asns")!.value;
+    expect(saved).toBe(asns);
+  });
+
   it("отдаёт и сохраняет адреса DNS", async () => {
     const saved = await call("/admin/api/settings", {
       method: "PUT",

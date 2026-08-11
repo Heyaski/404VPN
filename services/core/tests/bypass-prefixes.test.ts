@@ -17,6 +17,14 @@ describe("parseAsnList", () => {
   it("пустая строка даёт пустой список", () => {
     expect(parseAsnList("")).toEqual([]);
   });
+
+  it("принимает список по одному номеру на строку", () => {
+    expect(parseAsnList("AS44386\nAS207986\n\n  AS57073  ")).toEqual([44386, 207986, 57073]);
+  });
+
+  it("принимает смешанные разделители", () => {
+    expect(parseAsnList("AS1; AS2\nAS3 AS4,AS5")).toEqual([1, 2, 3, 4, 5]);
+  });
 });
 
 describe("parsePrefix", () => {
