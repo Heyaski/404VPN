@@ -55,7 +55,12 @@ final class VPNManager: ObservableObject {
         proto.serverAddress = settings.serverAddress
         proto.includeAllNetworks = settings.includeAllNetworks
         // Конфиг лежит в системном хранилище профиля, а не в файлах приложения
-        proto.providerConfiguration = ["wgQuickConfig": settings.wgQuickConfig]
+        // Префиксы обхода кладём списком как есть: дополнение к ним считает
+        // расширение при старте, поэтому в профиле лежат сотни строк, а не тысячи.
+        proto.providerConfiguration = [
+            "wgQuickConfig": settings.wgQuickConfig,
+            "bypassRoutes": config.bypassRoutes,
+        ]
 
         target.protocolConfiguration = proto
         target.localizedDescription = Self.displayName

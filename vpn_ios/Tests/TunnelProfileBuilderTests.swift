@@ -7,6 +7,7 @@ final class TunnelProfileBuilderTests: XCTestCase {
         address: "10.8.0.5/24",
         dns: ["1.1.1.1"],
         dnsFiltered: ["10.8.0.53"],
+        bypassRoutes: [],
         peer: TunnelPeer(publicKey: "bbb", presharedKey: nil,
                          endpoint: "195.14.118.198:51820",
                          allowedIps: ["0.0.0.0/0"], persistentKeepalive: 25))

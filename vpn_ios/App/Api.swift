@@ -15,6 +15,8 @@ struct TunnelConfig: Equatable {
     let dns: [String]
     /// Резолверы с фильтром рекламы. Пусто — фильтр на сервере не настроен.
     let dnsFiltered: [String]
+    /// Подсети, трафик к которым идёт мимо туннеля. Пусто — обход не настроен.
+    let bypassRoutes: [String]
     let peer: TunnelPeer
 
     var isFilterAvailable: Bool { !dnsFiltered.isEmpty }
@@ -44,7 +46,7 @@ struct TunnelConfig: Equatable {
 /// он нужен тестам. Поле dnsFiltered необязательное — сервер мог быть не обновлён.
 extension TunnelConfig: Codable {
     enum CodingKeys: String, CodingKey {
-        case privateKey, address, dns, dnsFiltered, peer
+        case privateKey, address, dns, dnsFiltered, bypassRoutes, peer
     }
 
     init(from decoder: Decoder) throws {
@@ -53,6 +55,7 @@ extension TunnelConfig: Codable {
         address = try c.decode(String.self, forKey: .address)
         dns = try c.decode([String].self, forKey: .dns)
         dnsFiltered = try c.decodeIfPresent([String].self, forKey: .dnsFiltered) ?? []
+        bypassRoutes = try c.decodeIfPresent([String].self, forKey: .bypassRoutes) ?? []
         peer = try c.decode(TunnelPeer.self, forKey: .peer)
     }
 }

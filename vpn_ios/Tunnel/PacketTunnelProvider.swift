@@ -37,8 +37,27 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
             throw PacketTunnelProviderError.invalidConfiguration
         }
 
+        // Маршруты в обход туннеля: пир получает всё, кроме исключённых подсетей.
+        // Пустой список или неудачный расчёт означают полный туннель — то есть
+        // поведение до появления обхода, а не отсутствие связи.
+        let bypass = proto.providerConfiguration?["bypassRoutes"] as? [String] ?? []
+        let ranges = bypass.isEmpty
+            ? []
+            : RouteCalculator.allowedIPs(excluding: bypass).compactMap { IPAddressRange(from: $0) }
+
+        var patched = configuration
+        if !ranges.isEmpty, !configuration.peers.isEmpty {
+            var peers = configuration.peers
+            peers[0].allowedIPs = ranges
+            patched = TunnelConfiguration(name: configuration.name,
+                                          interface: configuration.interface,
+                                          peers: peers)
+        } else if !bypass.isEmpty {
+            NSLog("[Overlay] обход не применён — поднимаем полный туннель")
+        }
+
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            adapter.start(tunnelConfiguration: configuration) { error in
+            adapter.start(tunnelConfiguration: patched) { error in
                 if let error {
                     NSLog("[Overlay] не удалось поднять туннель: \(error)")
                     continuation.resume(throwing: error)

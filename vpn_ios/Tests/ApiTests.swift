@@ -103,6 +103,7 @@ final class ApiErrorTests: XCTestCase {
 final class TunnelConfigDnsTests: XCTestCase {
     private func config(dns: [String], filtered: [String]) -> TunnelConfig {
         TunnelConfig(privateKey: "priv", address: "10.8.0.5/24", dns: dns, dnsFiltered: filtered,
+                     bypassRoutes: [],
                      peer: TunnelPeer(publicKey: "pub", presharedKey: nil,
                                       endpoint: "1.2.3.4:51820",
                                       allowedIps: ["0.0.0.0/0"], persistentKeepalive: 25))
@@ -144,5 +145,32 @@ final class TunnelConfigDnsTests: XCTestCase {
         let decoded = try JSONDecoder().decode(TunnelConfig.self, from: json)
 
         XCTAssertEqual(decoded.dnsFiltered, [], "старый сервер без поля не должен ломать разбор")
+    }
+}
+
+final class TunnelConfigBypassTests: XCTestCase {
+    func testDecodesBypassRoutes() throws {
+        let json = """
+        {"privateKey":"p","address":"10.8.0.5/24","dns":["1.1.1.1"],
+         "bypassRoutes":["10.0.0.0/8"],
+         "peer":{"publicKey":"pub","presharedKey":null,"endpoint":"1.2.3.4:51820",
+                 "allowedIps":["0.0.0.0/0"],"persistentKeepalive":25}}
+        """.data(using: .utf8)!
+
+        let decoded = try JSONDecoder().decode(TunnelConfig.self, from: json)
+
+        XCTAssertEqual(decoded.bypassRoutes, ["10.0.0.0/8"])
+    }
+
+    func testMissingBypassRoutesDecodeAsEmpty() throws {
+        let json = """
+        {"privateKey":"p","address":"10.8.0.5/24","dns":["1.1.1.1"],
+         "peer":{"publicKey":"pub","presharedKey":null,"endpoint":"1.2.3.4:51820",
+                 "allowedIps":["0.0.0.0/0"],"persistentKeepalive":25}}
+        """.data(using: .utf8)!
+
+        let decoded = try JSONDecoder().decode(TunnelConfig.self, from: json)
+
+        XCTAssertEqual(decoded.bypassRoutes, [], "старый сервер без поля не должен ломать разбор")
     }
 }

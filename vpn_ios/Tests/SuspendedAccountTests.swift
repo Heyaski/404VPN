@@ -5,7 +5,7 @@ import XCTest
 /// выключенном на сервере пире оставляют человека вообще без интернета.
 final class SuspendedAccountTests: XCTestCase {
     private let config = TunnelConfig(
-        privateKey: "aaa", address: "10.8.0.5/24", dns: ["1.1.1.1"], dnsFiltered: [],
+        privateKey: "aaa", address: "10.8.0.5/24", dns: ["1.1.1.1"], dnsFiltered: [], bypassRoutes: [],
         peer: TunnelPeer(publicKey: "bbb", presharedKey: nil,
                          endpoint: "195.14.118.198:51820",
                          allowedIps: ["0.0.0.0/0"], persistentKeepalive: 25))
