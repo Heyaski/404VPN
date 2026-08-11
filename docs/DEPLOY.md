@@ -245,8 +245,10 @@ cd vpn_ios && xcodegen generate && xcodegen generate --spec project.ui.yml && op
 2. **Поднять контейнер и применить миграции:**
 
    ```bash
-   git pull && docker compose up -d --build core adguard && set -a; . ./.env; set +a; ./db/migrate.sh
+   git pull && docker compose up -d --build core caddy adguard && set -a; . ./.env; set +a; ./db/migrate.sh
    ```
+
+   > **Caddy пересобирать обязательно.** Админка и мини-приложение собираются внутрь его образа (`infra/caddy/Dockerfile`), а не подключаются как файлы. Если пересобрать только `core`, панель останется старой: новые поля она сочтёт числовыми, прогонит адрес через `Number()`, получит `NaN`, и настройка не сохранится — поле будет молча стираться после каждого «Сохранить».
 
 3. **Первичная настройка через SSH-туннель** (веб-интерфейс наружу не смотрит):
 
