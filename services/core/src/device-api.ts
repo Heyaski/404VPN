@@ -5,6 +5,7 @@ import { hashCode, normalizeCode } from "./codes.js";
 import { applyBalanceChange } from "./ledger.js";
 import { deviceAuth, generateDeviceToken, hashToken, type DeviceRequest } from "./device-auth.js";
 import { getSetting, getTextSetting, parseDnsList } from "./settings.js";
+import { listBypassPrefixes } from "./bypass/import.js";
 import { daysLeft } from "./templates.js";
 import { reactivate } from "./billing.js";
 import { WgNotConfiguredError, type WgProvider } from "./wg/provider.js";
@@ -190,11 +191,13 @@ export function createDeviceRouter(
       // что отдал wg-easy; dns_filtered пуст — фильтр в приложении недоступен.
       const dnsDefault = parseDnsList(await getTextSetting(db, "dns_default"));
       const dnsFiltered = parseDnsList(await getTextSetting(db, "dns_filtered"));
+      const bypassRoutes = await listBypassPrefixes(db);
 
       res.json({
         ...tunnel,
         dns: dnsDefault.length > 0 ? dnsDefault : tunnel.dns,
         dnsFiltered,
+        bypassRoutes,
       });
     } catch (e) {
       if (e instanceof WgNotConfiguredError) {

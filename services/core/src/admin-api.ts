@@ -23,7 +23,7 @@ const EDITABLE_SETTINGS = [
 ];
 
 /** Настройки-строки: сохраняются как есть, без приведения к числу. */
-const TEXT_SETTINGS = ["support_contact", "dns_default", "dns_filtered"];
+const TEXT_SETTINGS = ["support_contact", "dns_default", "dns_filtered", "bypass_asns"];
 
 async function clientIdsOf(c: pg.PoolClient, userId: string): Promise<string[]> {
   const { rows } = await c.query(

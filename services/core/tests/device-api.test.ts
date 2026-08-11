@@ -258,6 +258,24 @@ describe("device endpoints", () => {
     expect(body.dnsFiltered).toEqual(["172.18.0.53"]);
   });
 
+  it("отдаёт пустой bypassRoutes, пока обход не настроен", async () => {
+    const token = await redeemNew();
+
+    const { body } = await call("/api/device/tunnel", { token, method: "POST" });
+
+    expect(body.bypassRoutes).toEqual([]);
+  });
+
+  it("отдаёт импортированные префиксы обхода", async () => {
+    await pool.query(
+      "INSERT INTO bypass_prefixes(asn, prefix) VALUES (1,'10.0.0.0/8'), (2,'192.168.0.0/16')");
+    const token = await redeemNew();
+
+    const { body } = await call("/api/device/tunnel", { token, method: "POST" });
+
+    expect(body.bypassRoutes.sort()).toEqual(["10.0.0.0/8", "192.168.0.0/16"]);
+  });
+
   it("повторный запрос туннеля тоже отдаёт оба набора", async () => {
     await pool.query("UPDATE settings SET value=to_jsonb($1::text) WHERE key='dns_filtered'",
                      ["172.18.0.53"]);
