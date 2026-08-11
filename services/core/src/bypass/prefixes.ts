@@ -4,10 +4,14 @@ export interface Prefix {
   length: number;
 }
 
-/** «AS12345, 200350» → [12345, 200350]. Мусор и повторы отбрасываются. */
+/**
+ * «AS12345, 200350» → [12345, 200350]. Мусор и повторы отбрасываются.
+ * Разделителем считается запятая, точка с запятой, пробел или перевод строки:
+ * список удобнее вести по одному номеру на строку, а не одной длинной строкой.
+ */
 export function parseAsnList(raw: string): number[] {
   const seen = new Set<number>();
-  for (const chunk of raw.split(",")) {
+  for (const chunk of raw.split(/[\s,;]+/)) {
     const cleaned = chunk.trim().replace(/^as/i, "");
     const n = Number(cleaned);
     if (!Number.isInteger(n) || n <= 0) continue;
