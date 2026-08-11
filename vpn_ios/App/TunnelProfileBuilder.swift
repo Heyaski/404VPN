@@ -12,7 +12,6 @@ struct TunnelProfileSettings: Equatable {
 /// по `NETunnelProviderManager`, а сама логика проверяется тестом.
 enum TunnelProfileBuilder {
     static func settings(config: TunnelConfig,
-                         killSwitch: Bool,
                          autoConnect: AutoConnectMode,
                          accountSuspended: Bool,
                          dnsFilter: Bool) -> TunnelProfileSettings {
@@ -20,7 +19,11 @@ enum TunnelProfileBuilder {
             // поле только для показа: адрес подключения система берёт из конфигурации WireGuard
             serverAddress: VPNManager.displayName,
             wgQuickConfig: config.wgQuick(filtered: dnsFilter),
-            includeAllNetworks: killSwitch,
+            // Всегда false, и это не формальность. Флаг загоняет в туннель весь трафик
+            // независимо от маршрутов, то есть убивает обход российских сервисов.
+            // Он живёт в сохранённом профиле, поэтому у тех, кто включал kill switch
+            // до обновления, его надо явно погасить.
+            includeAllNetworks: false,
             // при исчерпанном балансе сервер выключает пир: туннель не поднимется никогда,
             // а правила будут блокировать трафик — человек останется вообще без интернета
             onDemandEnabled: autoConnect != .off && !accountSuspended)

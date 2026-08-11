@@ -79,7 +79,6 @@ final class AppState: ObservableObject {
             // настроек знал о доступности ещё до следующего подключения
             preferences.dnsFilterAvailable = config.isFilterAvailable
             try await vpn.install(config: config,
-                                  killSwitch: preferences.killSwitch,
                                   autoConnect: preferences.autoConnectMode,
                                   trustedNetworks: preferences.trustedNetworks,
                                   accountSuspended: me?.isSuspended == true,
@@ -111,8 +110,7 @@ final class AppState: ObservableObject {
         preferences.lastBalance = me?.balance
         await vpn.applyPreferences(autoConnect: preferences.autoConnectMode,
                                    trustedNetworks: preferences.trustedNetworks,
-                                   killSwitch: preferences.killSwitch,
-                                   accountSuspended: me?.isSuspended == true)
+                                    accountSuspended: me?.isSuspended == true)
     }
 
     func signOut() {

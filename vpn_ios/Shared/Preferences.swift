@@ -37,12 +37,6 @@ struct Preferences {
         nonmutating set { defaults.set(newValue, forKey: Key.trusted) }
     }
 
-    /// По умолчанию выключен: includeAllNetworks ломает AirPlay, печать и локальную сеть.
-    var killSwitch: Bool {
-        get { defaults.bool(forKey: Key.killSwitch) }
-        nonmutating set { defaults.set(newValue, forKey: Key.killSwitch) }
-    }
-
     /// Последний известный баланс — чтобы виджет показывал его без похода в сеть.
     var lastBalance: String? {
         get { defaults.string(forKey: Key.balance) }
@@ -66,7 +60,6 @@ struct Preferences {
     private enum Key {
         static let autoConnect = "autoConnectMode"
         static let trusted = "trustedNetworks"
-        static let killSwitch = "killSwitch"
         static let balance = "lastBalance"
         static let dnsFilter = "dnsFilter"
         static let dnsFilterAvailable = "dnsFilterAvailable"

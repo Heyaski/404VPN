@@ -12,7 +12,7 @@ final class TunnelProfileBuilderTests: XCTestCase {
                          allowedIps: ["0.0.0.0/0"], persistentKeepalive: 25))
 
     func testServerAddressIsAppNameNotIP() {
-        let settings = TunnelProfileBuilder.settings(config: config, killSwitch: false,
+        let settings = TunnelProfileBuilder.settings(config: config,
                                                      autoConnect: .off, accountSuspended: false,
                                                dnsFilter: false)
 
@@ -21,20 +21,18 @@ final class TunnelProfileBuilderTests: XCTestCase {
                        "IP сервера пользователю показывать незачем")
     }
 
-    func testKillSwitchMapsToIncludeAllNetworks() {
-        let on = TunnelProfileBuilder.settings(config: config, killSwitch: true,
-                                               autoConnect: .off, accountSuspended: false,
-                                               dnsFilter: false)
-        let off = TunnelProfileBuilder.settings(config: config, killSwitch: false,
-                                                autoConnect: .off, accountSuspended: false,
-                                               dnsFilter: false)
+    func testAllNetworksFlagIsAlwaysOff() {
+        let settings = TunnelProfileBuilder.settings(config: config,
+                                                     autoConnect: .always,
+                                                     accountSuspended: false,
+                                                     dnsFilter: false)
 
-        XCTAssertTrue(on.includeAllNetworks)
-        XCTAssertFalse(off.includeAllNetworks)
+        XCTAssertFalse(settings.includeAllNetworks,
+                       "флаг живёт в сохранённом профиле: его надо явно гасить, а не просто не выставлять")
     }
 
     func testOnDemandEnabledWhenModeSet() {
-        let settings = TunnelProfileBuilder.settings(config: config, killSwitch: false,
+        let settings = TunnelProfileBuilder.settings(config: config,
                                                      autoConnect: .always, accountSuspended: false,
                                                      dnsFilter: false)
 
@@ -42,7 +40,7 @@ final class TunnelProfileBuilderTests: XCTestCase {
     }
 
     func testSuspendedAccountDisablesOnDemand() {
-        let settings = TunnelProfileBuilder.settings(config: config, killSwitch: false,
+        let settings = TunnelProfileBuilder.settings(config: config,
                                                      autoConnect: .always, accountSuspended: true,
                                                      dnsFilter: false)
 
@@ -51,7 +49,7 @@ final class TunnelProfileBuilderTests: XCTestCase {
     }
 
     func testConfigTextIsCarriedThrough() {
-        let settings = TunnelProfileBuilder.settings(config: config, killSwitch: false,
+        let settings = TunnelProfileBuilder.settings(config: config,
                                                      autoConnect: .off, accountSuspended: false,
                                                dnsFilter: false)
 
@@ -59,16 +57,16 @@ final class TunnelProfileBuilderTests: XCTestCase {
     }
 
     func testDnsFilterSelectsFilteringResolvers() {
-        let on = TunnelProfileBuilder.settings(config: config, killSwitch: false,
-                                               autoConnect: .off, accountSuspended: false,
+        let on = TunnelProfileBuilder.settings(config: config,
+                                                     autoConnect: .off, accountSuspended: false,
                                                dnsFilter: true)
 
         XCTAssertTrue(on.wgQuickConfig.contains("DNS = 10.8.0.53"))
     }
 
     func testDnsFilterOffKeepsPlainResolvers() {
-        let off = TunnelProfileBuilder.settings(config: config, killSwitch: false,
-                                                autoConnect: .off, accountSuspended: false,
+        let off = TunnelProfileBuilder.settings(config: config,
+                                                     autoConnect: .off, accountSuspended: false,
                                                 dnsFilter: false)
 
         XCTAssertTrue(off.wgQuickConfig.contains("DNS = 1.1.1.1"))

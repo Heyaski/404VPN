@@ -12,8 +12,8 @@ final class SuspendedAccountTests: XCTestCase {
 
     func testOnDemandStaysOffForEveryModeWhileSuspended() {
         for mode in AutoConnectMode.allCases {
-            let settings = TunnelProfileBuilder.settings(config: config, killSwitch: false,
-                                                         autoConnect: mode, accountSuspended: true,
+            let settings = TunnelProfileBuilder.settings(config: config,
+                                                     autoConnect: mode, accountSuspended: true,
                                                          dnsFilter: false)
             XCTAssertFalse(settings.onDemandEnabled,
                            "режим \(mode) не должен включать правила при suspended")
@@ -21,10 +21,10 @@ final class SuspendedAccountTests: XCTestCase {
     }
 
     func testOnDemandComesBackAfterTopUp() {
-        let suspended = TunnelProfileBuilder.settings(config: config, killSwitch: false,
-                                                      autoConnect: .always, accountSuspended: true,
+        let suspended = TunnelProfileBuilder.settings(config: config,
+                                                     autoConnect: .always, accountSuspended: true,
                                                       dnsFilter: false)
-        let restored = TunnelProfileBuilder.settings(config: config, killSwitch: false,
+        let restored = TunnelProfileBuilder.settings(config: config,
                                                      autoConnect: .always, accountSuspended: false,
                                                      dnsFilter: false)
 
@@ -32,11 +32,4 @@ final class SuspendedAccountTests: XCTestCase {
         XCTAssertTrue(restored.onDemandEnabled, "после пополнения правила возвращаются сами")
     }
 
-    func testKillSwitchIsIndependentOfSuspension() {
-        let settings = TunnelProfileBuilder.settings(config: config, killSwitch: true,
-                                                     autoConnect: .off, accountSuspended: true,
-                                                     dnsFilter: false)
-
-        XCTAssertTrue(settings.includeAllNetworks)
-    }
 }

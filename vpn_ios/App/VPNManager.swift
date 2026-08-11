@@ -35,12 +35,11 @@ final class VPNManager: ObservableObject {
 
     /// Создаёт или обновляет профиль туннеля из конфигурации, полученной с бэкенда.
     func install(config: TunnelConfig,
-                 killSwitch: Bool,
                  autoConnect: AutoConnectMode,
                  trustedNetworks: [String],
                  accountSuspended: Bool,
                  dnsFilter: Bool) async throws {
-        let settings = TunnelProfileBuilder.settings(config: config, killSwitch: killSwitch,
+        let settings = TunnelProfileBuilder.settings(config: config,
                                                      autoConnect: autoConnect,
                                                      accountSuspended: accountSuspended,
                                                      dnsFilter: dnsFilter)
@@ -76,10 +75,10 @@ final class VPNManager: ObservableObject {
     /// Нужно, когда человек поменял настройки или когда баланс ушёл в ноль.
     func applyPreferences(autoConnect: AutoConnectMode,
                           trustedNetworks: [String],
-                          killSwitch: Bool,
                           accountSuspended: Bool) async {
         guard let manager else { return }
-        (manager.protocolConfiguration as? NETunnelProviderProtocol)?.includeAllNetworks = killSwitch
+        // гасим флаг и здесь: профиль мог быть сохранён ещё со времён kill switch
+        (manager.protocolConfiguration as? NETunnelProviderProtocol)?.includeAllNetworks = false
         manager.onDemandRules = OnDemandRules.rules(mode: autoConnect, trustedNetworks: trustedNetworks)
         manager.isOnDemandEnabled = autoConnect != .off && !accountSuspended
         try? await manager.saveToPreferences()

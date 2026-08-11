@@ -40,11 +40,6 @@ final class PreferencesTests: XCTestCase {
         XCTAssertEqual(Preferences(defaults: defaults).trustedNetworks, ["Дом", "Офис"])
     }
 
-    func testKillSwitchIsOffByDefault() {
-        XCTAssertFalse(preferences.killSwitch,
-                       "includeAllNetworks ломает локальную сеть — по умолчанию выключен")
-    }
-
     func testLastBalanceRoundTrip() {
         preferences.lastBalance = "412.50"
 

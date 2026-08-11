@@ -7,7 +7,6 @@ struct SettingsView: View {
 
     @State private var mode: AutoConnectMode = Preferences.shared.autoConnectMode
     @State private var trusted: [String] = Preferences.shared.trustedNetworks
-    @State private var killSwitch: Bool = Preferences.shared.killSwitch
     @State private var newNetwork = ""
     @State private var confirmingUnlink = false
     @State private var dnsFilter: Bool = Preferences.shared.dnsFilter
@@ -113,17 +112,6 @@ struct SettingsView: View {
 
     private var protectionSection: some View {
         StatCard(label: "защита") {
-            Toggle("Kill switch", isOn: $killSwitch)
-                .font(.system(size: 14))
-                .tint(Theme.accent)
-                .onChange(of: killSwitch) { _ in persist() }
-            Text("Не выпускает трафик мимо туннеля. Побочный эффект: перестают работать AirPlay, печать и устройства в локальной сети.")
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.muted)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Divider().overlay(Theme.border).padding(.vertical, 4)
-
             Toggle("Блокировать рекламу и трекеры", isOn: $dnsFilter)
                 .font(.system(size: 14))
                 .tint(Theme.accent)
@@ -224,11 +212,9 @@ struct SettingsView: View {
         let preferences = Preferences.shared
         preferences.autoConnectMode = mode
         preferences.trustedNetworks = trusted
-        preferences.killSwitch = killSwitch
         Task {
             await vpn.applyPreferences(autoConnect: mode,
                                        trustedNetworks: trusted,
-                                       killSwitch: killSwitch,
                                        accountSuspended: state.me?.isSuspended == true)
         }
     }
