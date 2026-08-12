@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>404VPN — скачать</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #070b14;
+        --surface: #0f1626;
+        --border: rgba(255, 255, 255, 0.08);
+        --fg: #f3f6fc;
+        --muted: #8593a8;
+        --accent: #34d399;
+        --accent-contrast: #04150d;
+        --accent-glow: rgba(52, 211, 153, 0.28);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, system-ui, sans-serif;
+        color: var(--fg);
+        background:
+          linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
+          var(--bg);
+        background-size: 32px 32px, 32px 32px, auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .card {
+        width: min(440px, 100%);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 28px 24px;
+        box-shadow: 0 8px 28px rgba(0,0,0,.5);
+      }
+      .eyebrow {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 11px;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      h1 {
+        margin: 10px 0 8px;
+        font-size: 36px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+      h1 span { color: var(--accent); }
+      p { color: var(--muted); line-height: 1.45; margin: 0 0 20px; }
+      .btn {
+        display: block;
+        text-align: center;
+        text-decoration: none;
+        padding: 14px 16px;
+        border-radius: 999px;
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+      .btn.primary {
+        background: var(--accent);
+        color: var(--accent-contrast);
+        box-shadow: 0 0 24px var(--accent-glow);
+      }
+      .btn.secondary {
+        border: 1px solid rgba(255,255,255,.15);
+        color: var(--fg);
+      }
+      .note {
+        margin-top: 14px;
+        font-size: 12px;
+        color: var(--muted);
+        font-family: "IBM Plex Mono", monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="eyebrow">инженерная студия 404</div>
+      <h1><span>404</span>VPN</h1>
+      <p>Десктоп-клиент для Windows и macOS. После установки введи код из Telegram Mini App.</p>
+      <a class="btn primary" href="./404VPN-Setup.exe">Скачать для Windows</a>
+      <a class="btn secondary" href="#" aria-disabled="true" style="opacity:.45;pointer-events:none">macOS — скоро</a>
+      <div class="note">Установщик без подписи — SmartScreen может предупредить. Запуск от администратора.</div>
+    </div>
+  </body>
+</html>

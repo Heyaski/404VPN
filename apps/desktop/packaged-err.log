@@ -1,0 +1,33 @@
+[12324:0812/151717.519:VERBOSE1:device_event_log_impl.cc(203)] [15:17:17.515] Display: EVENT: screen_win.cc:911 Displays updated, count: 2
+[12324:0812/151717.538:VERBOSE1:device_event_log_impl.cc(203)] [15:17:17.537] Display: EVENT: screen_win.cc:913 Display[1194342603] bounds=[0,0 2560x1440], workarea=[0,0 2560x1392], scale=1, rotation=0, panel_rotation=0 external detected
+[12324:0812/151717.558:VERBOSE1:device_event_log_impl.cc(203)] [15:17:17.559] Display: EVENT: screen_win.cc:913 Display[1135639542] bounds=[-1920,196 1920x1080], workarea=[-1920,196 1920x1032], scale=1, rotation=0, panel_rotation=0 external detected
+[12324:0812/151717.587:VERBOSE1:pref_proxy_config_tracker_impl.cc(191)] 000052FC00074840: set chrome proxy config service to 000052FC00039BA0
+[12324:0812/151717.595:VERBOSE1:media_stream_manager.cc(1533)] MSM::InitializeMaybeAsync([this=000052FC000CAE00])
+[12324:0812/151717.596:VERBOSE1:media_stream_manager.cc(1533)] MDM::MediaDevicesManager()
+[12324:0812/151717.603:VERBOSE1:media_stream_manager.cc(1533)] MSM::MediaStreamManager([this=000052FC000CAE00]))
+[12324:0812/151717.616:VERBOSE1:pref_proxy_config_tracker_impl.cc(191)] 000052FC00075E40: set chrome proxy config service to 000052FC0003BC20
+[12324:0812/151717.618:VERBOSE1:device_event_log_impl.cc(203)] [15:17:17.618] Bluetooth: EVENT: bluetooth_api.cc:82 BluetoothAPI: 000052FC00116080
+[12324:0812/151717.637:VERBOSE1:device_event_log_impl.cc(203)] [15:17:17.637] Display: EVENT: screen_win.cc:911 Displays updated, count: 2
+[12324:0812/151717.643:VERBOSE1:device_event_log_impl.cc(203)] [15:17:17.642] Display: EVENT: screen_win.cc:913 Display[1194342603] bounds=[0,0 2560x1440], workarea=[0,0 2560x1392], scale=1, rotation=0, panel_rotation=0 external detected
+[12324:0812/151717.643:VERBOSE1:device_event_log_impl.cc(203)] [15:17:17.643] Display: EVENT: screen_win.cc:913 Display[1135639542] bounds=[-1920,196 1920x1080], workarea=[-1920,196 1920x1032], scale=1, rotation=0, panel_rotation=0 external detected
+[12324:0812/151717.673:VERBOSE1:first_party_sets_handler_impl_instance.cc(277)] Empty path. Failed initializing First-Party Sets database.
+[12324:0812/151717.688:ERROR:cache_util_win.cc(20)] Unable to move the cache: Отказано в доступе. (0x5)
+[12324:0812/151717.688:ERROR:cache_util_win.cc(20)] Unable to move the cache: Отказано в доступе. (0x5)
+[12324:0812/151717.688:ERROR:cache_util_win.cc(20)] Unable to move the cache: Отказано в доступе. (0x5)
+[12324:0812/151717.709:ERROR:disk_cache.cc(208)] Unable to create cache
+[12324:0812/151717.709:ERROR:gpu_disk_cache.cc(713)] Gpu Cache Creation failed: -2
+[12324:0812/151717.709:ERROR:disk_cache.cc(208)] Unable to create cache
+[12324:0812/151717.711:ERROR:gpu_disk_cache.cc(713)] Gpu Cache Creation failed: -2
+[12324:0812/151717.711:ERROR:disk_cache.cc(208)] Unable to create cache
+[12324:0812/151717.711:ERROR:gpu_disk_cache.cc(713)] Gpu Cache Creation failed: -2
+[12324:0812/151717.803:INFO:CONSOLE(2)] "Unable to load preload script: D:\project\404VPN\releases\desktop\win-unpacked\resources\app.asar\dist\preload\index.js", source: node:electron/js2c/renderer_init (2)
+[12324:0812/151717.804:INFO:CONSOLE(2)] "Error [ERR_REQUIRE_ESM]: require() of ES Module D:\project\404VPN\releases\desktop\win-unpacked\resources\app.asar\dist\preload\index.js not supported.
+index.js is treated as an ES module file as it is a .js file whose nearest parent package.json contains "type": "module" which declares all .js files in that package scope as ES modules.
+Instead either rename index.js to end in .cjs, change the requiring code to use dynamic import() which is available in all CommonJS modules, or change "type": "module" to "type": "commonjs" in D:\project\404VPN\releases\desktop\win-unpacked\resources\app.asar\package.json to treat all .js files as CommonJS (using .mjs for all ES modules instead).
+", source: node:electron/js2c/renderer_init (2)
+[12324:0812/151717.869:VERBOSE1:device_event_log_impl.cc(203)] [15:17:17.869] Display: EVENT: screen_win.cc:911 Displays updated, count: 2
+[12324:0812/151717.870:VERBOSE1:device_event_log_impl.cc(203)] [15:17:17.870] Display: EVENT: screen_win.cc:913 Display[1194342603] bounds=[0,0 2560x1440], workarea=[0,0 2560x1392], scale=1, rotation=0, panel_rotation=0 external detected
+[12324:0812/151717.870:VERBOSE1:device_event_log_impl.cc(203)] [15:17:17.870] Display: EVENT: screen_win.cc:913 Display[1135639542] bounds=[-1920,196 1920x1080], workarea=[-1920,196 1920x1032], scale=1, rotation=0, panel_rotation=0 external detected
+[12324:0812/151718.289:INFO:CONSOLE(40)] "TypeError: Cannot read properties of undefined (reading 'onStatus')", source: file:///D:/project/404VPN/releases/desktop/win-unpacked/resources/app.asar/dist/renderer/assets/index-quWMKbA1.js (40)
+[12324:0812/151718.290:INFO:CONSOLE(38)] "Uncaught TypeError: Cannot read properties of undefined (reading 'onStatus')", source: file:///D:/project/404VPN/releases/desktop/win-unpacked/resources/app.asar/dist/renderer/assets/index-quWMKbA1.js (38)
+[12324:0812/151718.290:INFO:CONSOLE(40)] "Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'getPreferences')", source: file:///D:/project/404VPN/releases/desktop/win-unpacked/resources/app.asar/dist/renderer/assets/index-quWMKbA1.js (40)

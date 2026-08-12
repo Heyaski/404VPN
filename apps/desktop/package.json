@@ -1,0 +1,112 @@
+{
+  "name": "404vpn-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "404VPN desktop client (Windows + macOS)",
+  "author": "404 Studiotech",
+  "main": "dist/main/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "node scripts/make-icons.mjs && node scripts/build.mjs",
+    "build:helper": "node scripts/build-helper.mjs",
+    "fetch:wintun": "node scripts/fetch-wintun.mjs",
+    "dist:win": "npm run build && npm run build:helper && npm run fetch:wintun && electron-builder --win --x64 && node scripts/publish-download.mjs",
+    "dist:mac": "npm run build && npm run build:helper && electron-builder --mac --x64 --arm64 && node scripts/publish-download.mjs",
+    "publish:download": "node scripts/publish-download.mjs",
+    "test:routes": "node --experimental-strip-types scripts/test-routes.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.0",
+    "png-to-ico": "^3.0.2",
+    "typescript": "~5.6.3",
+    "vite": "^5.4.11"
+  },
+  "build": {
+    "appId": "co.404studio.vpn.desktop",
+    "productName": "404VPN",
+    "directories": {
+      "output": "../../releases/desktop",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "build/icon.png",
+      "build/icon.ico",
+      "package.json"
+    ],
+    "extraFiles": [
+      {
+        "from": "build/icon.png",
+        "to": "resources/icon.png"
+      },
+      {
+        "from": "build/icon.ico",
+        "to": "resources/icon.ico"
+      }
+    ],
+    "extraResources": [
+      {
+        "from": "tunnel/dist",
+        "to": "tunnel",
+        "filter": [
+          "**/*",
+          "!*.zip",
+          "!.gitkeep"
+        ]
+      }
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "requestedExecutionLevel": "requireAdministrator",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "404VPN-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "perMachine": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "404VPN",
+      "runAfterFinish": true
+    },
+    "mac": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "artifactName": "404VPN-${version}-${arch}.${ext}",
+      "category": "public.app-category.utilities",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "artifactName": "404VPN-${version}-${arch}.${ext}"
+    }
+  }
+}

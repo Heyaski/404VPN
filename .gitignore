@@ -6,6 +6,15 @@ graphify-out/
 xcuserdata/
 *.xcuserstate
 
+# Desktop: установщики и бинарники helper
+releases/desktop/*
+!releases/desktop/public/
+releases/desktop/public/*
+!releases/desktop/public/index.html
+apps/desktop/tunnel/dist/*
+!apps/desktop/tunnel/dist/.gitkeep
+apps/desktop/tunnel/wintun-extract/
+
 # iOS: проект генерируется XcodeGen из project.yml
 vpn_ios/*.xcodeproj/
 vpn_ios/**/*.generated.plist
