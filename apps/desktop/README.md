@@ -41,11 +41,13 @@ cp ../../releases/desktop/404VPN-*-arm64.dmg ../../releases/desktop/public/404VP
 cp apps/desktop/download/index.html ../../releases/desktop/public/index.html
 ```
 
-После деплоя Caddy отдаёт:
+После деплоя Caddy отдаёт (домен VPN = `DOMAIN` в `.env`, у тебя это):
 
-- `https://404studiotech.ru/download/` — страница скачивания
-- `https://<DOMAIN>/download/404VPN-Setup.exe`
-- `https://<DOMAIN>/download/404VPN.dmg`
+- `https://404studiotech-miniapp.ru/download/` — страница скачивания
+- `https://404studiotech-miniapp.ru/download/404VPN-Setup.exe`
+- `https://404studiotech-miniapp.ru/download/404VPN.dmg` (когда соберёшь на Mac)
+
+`404studiotech.ru` — сайт студии, не VPN; туда установщик сам не попадёт.
 
 ## Windows: системный модуль туннеля
 

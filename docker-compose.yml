@@ -55,6 +55,8 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
+      # установщики: releases/desktop/public → /download/
+      - ./releases/desktop/public:/srv/download:ro
     depends_on:
       - core
     restart: unless-stopped

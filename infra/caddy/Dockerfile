@@ -15,3 +15,5 @@ FROM caddy:2-alpine
 COPY infra/caddy/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /build/miniapp/dist /srv/app
 COPY --from=build /build/admin/dist /srv/admin
+# страница /download; бинарники монтируются volume'ом (см. compose)
+COPY apps/desktop/download /srv/download

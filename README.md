@@ -8,4 +8,4 @@ VPN-сервис: iOS-клиент (WireGuard), десктоп (Windows/macOS), 
 - Деплой: [docs/DEPLOY.md](docs/DEPLOY.md) (появится в Task 10)
 - Десктоп-клиент: [apps/desktop/README.md](apps/desktop/README.md)
 
-Скачать установщик (после публикации билдов): `https://<DOMAIN>/download/`
+Скачать установщик (после публикации билдов): `https://404studiotech-miniapp.ru/download/`

@@ -23,6 +23,12 @@
 		reverse_proxy core:8080
 	}
 
+	# установщики десктопа: https://<DOMAIN>/download/
+	handle_path /download* {
+		root * /srv/download
+		file_server
+	}
+
 	# статика Mini App (SPA — все прочие пути отдают index.html)
 	handle {
 		root * /srv/app
