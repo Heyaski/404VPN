@@ -17,8 +17,19 @@ enum RouteCalculator {
     /// испорченный префикс не должен оставлять человека без маршрутов вообще.
     static func allowedIPs(excluding raw: [String]) -> [String] {
         let excluded = raw.compactMap(parse)
-        return (cover(family: 4, excluded: excluded) + cover(family: 16, excluded: excluded))
+        // Проверять пустоту надо по каждой версии протокола отдельно. Если исключить
+        // всё адресное пространство IPv4, дополнение по нему станет пустым, а общий
+        // список останется непустым за счёт ::/0 — и в туннель уедет пир вообще без
+        // IPv4-маршрутов. На обычной сети это выглядит как «интернет пропал».
+        return (whole(family: 4, orElse: cover(family: 4, excluded: excluded))
+            + whole(family: 16, orElse: cover(family: 16, excluded: excluded)))
             .map(format)
+    }
+
+    private static func whole(family: Int, orElse computed: [IPPrefix]) -> [IPPrefix] {
+        computed.isEmpty
+            ? [IPPrefix(bytes: [UInt8](repeating: 0, count: family), length: 0)]
+            : computed
     }
 
     private static func cover(family: Int, excluded: [IPPrefix]) -> [IPPrefix] {

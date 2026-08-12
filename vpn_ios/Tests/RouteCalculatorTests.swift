@@ -28,11 +28,20 @@ final class RouteCalculatorTests: XCTestCase {
         XCTAssertTrue(ipv4.contains("192.0.0.0/2") || ipv4.contains("128.0.0.0/1"))
     }
 
-    func testExcludingEverythingLeavesNothingForThatFamily() {
+    /// Исключить всё адресное пространство — это не «оставить человека без IPv4»,
+    /// а признак испорченных данных: возвращаемся к полному туннелю.
+    func testExcludingEverythingFallsBackToWholeFamily() {
         let result = RouteCalculator.allowedIPs(excluding: ["0.0.0.0/0"])
 
-        XCTAssertEqual(result.filter { !$0.contains(":") }, [String]())
-        XCTAssertEqual(result.filter { $0.contains(":") }, ["::/0"], "IPv6 не затронут")
+        XCTAssertEqual(result, ["0.0.0.0/0", "::/0"])
+    }
+
+    func testExcludingAllIPv6FallsBackButKeepsIPv4Split() {
+        let result = RouteCalculator.allowedIPs(excluding: ["::/0", "10.0.0.0/8"])
+
+        XCTAssertTrue(result.contains("::/0"), "IPv6 возвращается целиком")
+        XCTAssertFalse(result.contains("0.0.0.0/0"), "а разбиение IPv4 сохраняется")
+        XCTAssertTrue(result.contains("11.0.0.0/8"))
     }
 
     func testIPv6ExclusionAffectsOnlyIPv6() {
