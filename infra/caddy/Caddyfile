@@ -23,10 +23,21 @@
 		reverse_proxy core:8080
 	}
 
-	# установщики десктопа: https://<DOMAIN>/download/
-	handle_path /download* {
+	# страница /download/ — обычный HTML, БЕЗ Content-Disposition
+	@downloadPage path /download /download/
+	handle @downloadPage {
 		root * /srv/download
-		header Content-Disposition "attachment"
+		rewrite * /index.html
+		file_server
+	}
+
+	# сам установщик
+	@downloadExe path /download/404VPN-Setup.exe /404VPN-Setup.exe
+	handle @downloadExe {
+		root * /srv/download
+		rewrite * /404VPN-Setup.exe
+		header Content-Type "application/octet-stream"
+		header Content-Disposition "attachment; filename=\"404VPN-Setup.exe\""
 		file_server
 	}
 
