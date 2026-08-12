@@ -26,6 +26,7 @@
 	# установщики десктопа: https://<DOMAIN>/download/
 	handle_path /download* {
 		root * /srv/download
+		header Content-Disposition "attachment"
 		file_server
 	}
 
