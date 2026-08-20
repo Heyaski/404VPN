@@ -34,6 +34,8 @@ export type VpnStatus = "disconnected" | "connecting" | "connected" | "disconnec
 export interface TunnelStats {
   rxBytes: number;
   txBytes: number;
+  /** Unix seconds of last WireGuard handshake; 0 = never. */
+  lastHandshakeSec?: number;
 }
 
 export interface HelperUpPayload {

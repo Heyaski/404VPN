@@ -39,8 +39,9 @@ type peerSpec struct {
 }
 
 type TunnelStats struct {
-	RxBytes uint64 `json:"rxBytes"`
-	TxBytes uint64 `json:"txBytes"`
+	RxBytes           uint64 `json:"rxBytes"`
+	TxBytes           uint64 `json:"txBytes"`
+	LastHandshakeSec  int64  `json:"lastHandshakeSec"`
 }
 
 func logf(format string, args ...any) {

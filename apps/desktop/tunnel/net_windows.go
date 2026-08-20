@@ -174,6 +174,8 @@ func hasSplitDefault(ifIndex int) bool {
 
 func applyNetConfig(iface string, _ tun.Device, cfg *netConfig) error {
 	gen := netGen.Add(1)
+	// После sleep / смены Wi‑Fi старый шлюз часто неверный
+	cachedPhysGW = ""
 
 	ip, ipNet, err := net.ParseCIDR(cfg.Address)
 	if err != nil {

@@ -243,6 +243,7 @@ func (t *tunnel) Stats() TunnelStats {
 		return TunnelStats{}
 	}
 	var rx, tx uint64
+	var lastHS int64
 	for _, line := range strings.Split(raw, "\n") {
 		if strings.HasPrefix(line, "rx_bytes=") {
 			fmt.Sscanf(line, "rx_bytes=%d", &rx)
@@ -250,8 +251,11 @@ func (t *tunnel) Stats() TunnelStats {
 		if strings.HasPrefix(line, "tx_bytes=") {
 			fmt.Sscanf(line, "tx_bytes=%d", &tx)
 		}
+		if strings.HasPrefix(line, "last_handshake_time_sec=") {
+			fmt.Sscanf(line, "last_handshake_time_sec=%d", &lastHS)
+		}
 	}
-	return TunnelStats{RxBytes: rx, TxBytes: tx}
+	return TunnelStats{RxBytes: rx, TxBytes: tx, LastHandshakeSec: lastHS}
 }
 
 func splitHostPort(endpoint string) (host string, port string, err error) {

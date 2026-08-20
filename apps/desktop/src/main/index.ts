@@ -4,6 +4,7 @@ import {
   ipcMain,
   Menu,
   nativeImage,
+  powerMonitor,
   shell,
   Tray,
 } from "electron";
@@ -215,6 +216,11 @@ app.whenReady().then(() => {
   if (loadToken()) {
     void fetchTunnelConfig().catch(() => undefined);
   }
+
+  // После сна/гибернации маршруты и NAT часто «отваливаются»
+  powerMonitor.on("resume", () => {
+    tunnel.onSystemResume();
+  });
 
   app.on("activate", () => {
     showMainWindow();

@@ -12,6 +12,13 @@ type HelperResponse = {
   stats?: TunnelStats;
 };
 
+/** WireGuard считает пир «мёртвым», если handshake старше ~180с. Берём с запасом. */
+const HANDSHAKE_STALE_SEC = 150;
+/** После connect даём время на первый handshake. */
+const HANDSHAKE_GRACE_MS = 30_000;
+const WATCHDOG_MS = 15_000;
+const MAX_RECONNECT_ATTEMPTS = 3;
+
 export class TunnelManager {
   private child: ChildProcessWithoutNullStreams | null = null;
   private pending = new Map<
@@ -22,9 +29,17 @@ export class TunnelManager {
   private buffer = "";
   private status: VpnStatus = "disconnected";
   private lastConfig: TunnelConfig | null = null;
+  private lastDnsFilter = false;
   private lastError: string | null = null;
   private stderrBuf = "";
   private intentionalStop = false;
+
+  /** Пользователь хочет, чтобы VPN был включён (для авто-reconnect). */
+  private wantConnected = false;
+  private connectedAt = 0;
+  private watchdogTimer: ReturnType<typeof setInterval> | null = null;
+  private reconnecting = false;
+  private reconnectAttempts = 0;
 
   getStatus(): VpnStatus {
     return this.status;
@@ -129,7 +144,6 @@ export class TunnelManager {
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (chunk: string) => {
       this.stderrBuf += chunk;
-      // логи только в консоль, не в UI
       console.error("[tunnel-helper]", chunk.trim());
     });
 
@@ -149,6 +163,10 @@ export class TunnelManager {
       this.pending.clear();
       if (this.status === "connected" || this.status === "connecting") {
         this.setStatus("disconnected");
+      }
+      // Helper упал, но пользователь хотел VPN — попробуем поднять снова
+      if (this.wantConnected && this.lastConfig && !this.reconnecting) {
+        void this.recover("helper-exit");
       }
     });
 
@@ -193,9 +211,137 @@ export class TunnelManager {
     }
   }
 
+  private startWatchdog(): void {
+    this.stopWatchdog();
+    this.watchdogTimer = setInterval(() => {
+      void this.watchdogTick();
+    }, WATCHDOG_MS);
+  }
+
+  private stopWatchdog(): void {
+    if (this.watchdogTimer) {
+      clearInterval(this.watchdogTimer);
+      this.watchdogTimer = null;
+    }
+  }
+
+  private async watchdogTick(): Promise<void> {
+    if (!this.wantConnected || this.reconnecting) return;
+    if (this.status === "connecting" || this.status === "disconnecting") return;
+
+    // После неудачного reconnect статус может быть не connected — пробуем снова
+    if (this.status !== "connected") {
+      await this.recover("want-connected");
+      return;
+    }
+
+    try {
+      const res = await this.send("stats", undefined, 4_000);
+      // Старый helper без lastHandshakeSec — не дёргаем reconnect по ложному 0
+      if (res.stats == null || res.stats.lastHandshakeSec === undefined) {
+        return;
+      }
+      const hs = res.stats.lastHandshakeSec;
+      const upFor = Date.now() - this.connectedAt;
+      const ageSec = hs > 0 ? Math.floor(Date.now() / 1000) - hs : null;
+
+      let unhealthy = false;
+      if (hs === 0 && upFor > HANDSHAKE_GRACE_MS) {
+        unhealthy = true;
+      } else if (ageSec != null && ageSec > HANDSHAKE_STALE_SEC) {
+        unhealthy = true;
+      }
+
+      if (unhealthy) {
+        console.warn("[tunnel] unhealthy handshake", { hs, ageSec, upFor });
+        await this.recover("stale-handshake");
+      }
+    } catch (e) {
+      console.warn("[tunnel] watchdog stats failed", e);
+      await this.recover("stats-failed");
+    }
+  }
+
+  /**
+   * Сон / смена сети: маршруты и NAT часто умирают, UI остаётся «подключено».
+   * Через пару секунд форсируем проверку / reconnect.
+   */
+  onSystemResume(): void {
+    if (!this.wantConnected || !this.lastConfig) return;
+    console.warn("[tunnel] system resume — health check soon");
+    setTimeout(() => {
+      void this.watchdogTick();
+    }, 3_000);
+  }
+
+  private async recover(reason: string): Promise<void> {
+    if (!this.wantConnected || !this.lastConfig || this.reconnecting) return;
+    this.reconnecting = true;
+    this.reconnectAttempts += 1;
+
+    if (this.reconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
+      console.error("[tunnel] reconnect gave up after", reason);
+      this.persistError("Соединение потеряно. Нажми «Подключить» ещё раз.");
+      this.wantConnected = false;
+      this.stopWatchdog();
+      this.setStatus("error");
+      this.reconnecting = false;
+      return;
+    }
+
+    console.warn(
+      `[tunnel] reconnect ${this.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} (${reason})`,
+    );
+    this.setStatus("connecting");
+
+    try {
+      try {
+        await Promise.race([
+          this.send("down", undefined, 5_000),
+          new Promise<HelperResponse>((_, reject) =>
+            setTimeout(() => reject(new Error("down timeout")), 5_000),
+          ),
+        ]);
+      } catch {
+        /* continue — up перезатрёт */
+      }
+
+      await sleep(400 * this.reconnectAttempts);
+
+      const payload: HelperUpPayload = buildHelperPayload(
+        this.lastConfig,
+        this.lastDnsFilter,
+      );
+      const res = await this.send("up", payload, 90_000);
+      if (!res.ok) throw new Error(humanizeTunnelError(res.error));
+
+      this.clearLastError();
+      this.connectedAt = Date.now();
+      this.reconnectAttempts = 0;
+      this.setStatus("connected");
+      this.startWatchdog();
+    } catch (e) {
+      console.error("[tunnel] reconnect failed", e);
+      if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        this.persistError(
+          e instanceof Error
+            ? humanizeTunnelError(e.message)
+            : "Соединение потеряно. Нажми «Подключить» ещё раз.",
+        );
+        this.wantConnected = false;
+        this.stopWatchdog();
+        this.setStatus("error");
+      } else {
+        // Следующий тик watchdog снова вызовет recover
+        this.setStatus("disconnected");
+      }
+    } finally {
+      this.reconnecting = false;
+    }
+  }
+
   async warmup(): Promise<void> {
     try {
-      // Первый CreateTUN на чужих ПК может занять десятки секунд
       await this.send("warmup", undefined, 60_000);
     } catch (e) {
       console.error("tunnel warmup failed", e);
@@ -204,21 +350,29 @@ export class TunnelManager {
 
   async connect(config: TunnelConfig, dnsFilter: boolean): Promise<void> {
     this.lastConfig = config;
+    this.lastDnsFilter = dnsFilter;
+    this.wantConnected = true;
+    this.reconnectAttempts = 0;
     this.clearLastError();
     this.setStatus("connecting");
     const payload: HelperUpPayload = buildHelperPayload(config, dnsFilter);
     try {
-      // up = CreateTUN + маршруты + handshake; на чистом Windows часто >12с
       const res = await this.send("up", payload, 90_000);
       if (!res.ok) throw new Error(humanizeTunnelError(res.error));
       this.clearLastError();
+      this.connectedAt = Date.now();
       this.setStatus("connected");
+      this.startWatchdog();
     } catch (e) {
       if (await this.probeConnected()) {
         this.clearLastError();
+        this.connectedAt = Date.now();
         this.setStatus("connected");
+        this.startWatchdog();
         return;
       }
+      this.wantConnected = false;
+      this.stopWatchdog();
       this.setStatus("error");
       const msg =
         e instanceof Error
@@ -230,6 +384,9 @@ export class TunnelManager {
   }
 
   async disconnect(): Promise<void> {
+    this.wantConnected = false;
+    this.stopWatchdog();
+    this.reconnectAttempts = 0;
     this.setStatus("disconnecting");
     try {
       if (this.child) {
@@ -255,6 +412,8 @@ export class TunnelManager {
   }
 
   async shutdown(): Promise<void> {
+    this.wantConnected = false;
+    this.stopWatchdog();
     this.intentionalStop = true;
     try {
       await this.disconnect();
@@ -272,13 +431,15 @@ export class TunnelManager {
   }
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /** Не показывать сырые логи helper'а пользователю. */
 function sanitizeError(raw?: string | null): string | null {
   if (!raw) return null;
   const msg = raw.trim();
   if (!msg) return null;
-  // Диагностические логи Wintun/helper часто содержат слова error/fail,
-  // но это не текст ошибки для UI.
   if (
     msg.includes("[tunnel-helper]") ||
     msg.includes("Using existing driver") ||

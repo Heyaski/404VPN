@@ -26,9 +26,8 @@ export function buildHelperPayload(config: TunnelConfig, dnsFilter: boolean) {
         : {}),
       endpoint: config.peer.endpoint,
       allowedIps: ["0.0.0.0/0"],
-      ...(config.peer.persistentKeepalive != null
-        ? { persistentKeepalive: config.peer.persistentKeepalive }
-        : {}),
+      // Без keepalive NAT/CGNAT часто убивает UDP — туннель «висит», пока не reconnect.
+      persistentKeepalive: config.peer.persistentKeepalive ?? 25,
     },
   };
 }
