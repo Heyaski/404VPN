@@ -85,6 +85,38 @@ describe("POST /api/redeem", () => {
     expect(tx.type).toBe("code_redeem");
   });
 
+  it("stores platform from body (android/desktop), defaults to ios", async () => {
+    const androidCode = await makeCode(100);
+    const a = await call("/api/redeem", {
+      method: "POST",
+      body: { code: androidCode, deviceName: "Pixel 8", platform: "android" },
+    });
+    expect(a.status).toBe(200);
+    const { rows: [ad] } = await pool.query(
+      "SELECT name, platform FROM devices WHERE name=$1", ["Pixel 8"]);
+    expect(ad.platform).toBe("android");
+
+    const desktopCode = await makeCode(100);
+    const d = await call("/api/redeem", {
+      method: "POST",
+      body: { code: desktopCode, platform: "desktop" },
+    });
+    expect(d.status).toBe(200);
+    const { rows: [dd] } = await pool.query(
+      "SELECT platform FROM devices ORDER BY created_at DESC LIMIT 1");
+    expect(dd.platform).toBe("desktop");
+
+    const badCode = await makeCode(100);
+    const b = await call("/api/redeem", {
+      method: "POST",
+      body: { code: badCode, platform: "windows" },
+    });
+    expect(b.status).toBe(200);
+    const { rows: [bd] } = await pool.query(
+      "SELECT platform FROM devices ORDER BY created_at DESC LIMIT 1");
+    expect(bd.platform).toBe("ios");
+  });
+
   it("accepts the code regardless of case and dashes", async () => {
     const code = await makeCode(100);
     const messy = code.toLowerCase().replace(/-/g, " ");

@@ -62,6 +62,10 @@ export function App() {
     })();
     return window.overlay.onStatus((s) => {
       setStatus(s);
+      if (s === "connected" || s === "disconnected") {
+        setError(null);
+        return;
+      }
       if (s === "error") {
         void window.overlay.lastError().then((msg) => {
           if (msg) setError(msg);

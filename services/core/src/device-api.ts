@@ -56,11 +56,22 @@ export function createDeviceRouter(
       res.status(429).json({ error: "too_many_attempts" });
       return;
     }
-    const { code, deviceName } = (req.body ?? {}) as { code?: unknown; deviceName?: unknown };
+    const { code, deviceName, platform: platformRaw } = (req.body ?? {}) as {
+      code?: unknown;
+      deviceName?: unknown;
+      platform?: unknown;
+    };
     if (typeof code !== "string" || code.trim() === "") {
       res.status(400).json({ error: "invalid_code" });
       return;
     }
+    const allowedPlatforms = new Set(["ios", "android", "desktop"]);
+    const platform =
+      typeof platformRaw === "string" && allowedPlatforms.has(platformRaw)
+        ? platformRaw
+        : "ios";
+    const defaultName =
+      platform === "android" ? "Android" : platform === "desktop" ? "PC" : "iPhone";
 
     try {
       const result = await withTxOn(db, async (c): Promise<RedeemResult> => {
@@ -111,9 +122,14 @@ export function createDeviceRouter(
 
         const token = generateDeviceToken();
         await c.query(
-          "INSERT INTO devices(user_id, name, token_hash, platform) VALUES ($1,$2,$3,'ios')",
-          [userId, typeof deviceName === "string" && deviceName ? deviceName.slice(0, 64) : "iPhone",
-           hashToken(token)]);
+          "INSERT INTO devices(user_id, name, token_hash, platform) VALUES ($1,$2,$3,$4)",
+          [
+            userId,
+            typeof deviceName === "string" && deviceName ? deviceName.slice(0, 64) : defaultName,
+            hashToken(token),
+            platform,
+          ],
+        );
 
         const { rows: [{ devices }] } = await c.query(
           `SELECT count(*)::int AS devices FROM devices

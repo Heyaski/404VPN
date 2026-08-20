@@ -15,6 +15,32 @@ apps/desktop/tunnel/dist/*
 !apps/desktop/tunnel/dist/.gitkeep
 apps/desktop/tunnel/wintun-extract/
 
+# Случайный dump win-unpacked / Electron в корень репо (не коммитить)
+/404VPN.exe
+/Uninstall *.exe
+/LICENSE.electron.txt
+/LICENSES.chromium.html
+/*.dll
+/*.pak
+/*.dat
+/*.bin
+/locales/
+/resources/
+/resources.pak
+/chrome_*.pak
+/snapshot_blob.bin
+/v8_context_snapshot.bin
+/vk_swiftshader*
+
+# Android
+vpn_android/.gradle/
+vpn_android/.idea/
+vpn_android/**/build/
+vpn_android/local.properties
+vpn_android/deps.txt
+vpn_android/*.apk
+*.apk
+
 # iOS: проект генерируется XcodeGen из project.yml
 vpn_ios/*.xcodeproj/
 vpn_ios/**/*.generated.plist
@@ -23,3 +49,5 @@ vpn_ios/.swiftpm/
 vpn_ios/Vendor/WireGuardKit/Sources/WireGuardKitGo/out/
 vpn_ios/Vendor/WireGuardKit/Sources/WireGuardKitGo/.tmp/
 .superpowers/
+
+vpn_android/.kotlin/

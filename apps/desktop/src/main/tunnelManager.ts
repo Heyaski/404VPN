@@ -155,7 +155,7 @@ export class TunnelManager {
     return child;
   }
 
-  private send(cmd: string, payload?: unknown): Promise<HelperResponse> {
+  private send(cmd: string, payload?: unknown, timeoutMs = 12_000): Promise<HelperResponse> {
     const child = this.ensureChild();
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
@@ -172,7 +172,7 @@ export class TunnelManager {
           this.pending.delete(id);
           reject(new Error("Таймаут модуля туннеля. Попробуй ещё раз."));
         }
-      }, 12_000);
+      }, timeoutMs);
     });
   }
 
@@ -183,9 +183,20 @@ export class TunnelManager {
     }
   }
 
+  /** Если UI уже отвалился по таймауту, а helper успел поднять туннель — доверяем факту. */
+  private async probeConnected(): Promise<boolean> {
+    try {
+      const st = await this.send("status", undefined, 4_000);
+      return Boolean(st.ok && st.status === "connected");
+    } catch {
+      return false;
+    }
+  }
+
   async warmup(): Promise<void> {
     try {
-      await this.send("warmup");
+      // Первый CreateTUN на чужих ПК может занять десятки секунд
+      await this.send("warmup", undefined, 60_000);
     } catch (e) {
       console.error("tunnel warmup failed", e);
     }
@@ -197,11 +208,17 @@ export class TunnelManager {
     this.setStatus("connecting");
     const payload: HelperUpPayload = buildHelperPayload(config, dnsFilter);
     try {
-      const res = await this.send("up", payload);
+      // up = CreateTUN + маршруты + handshake; на чистом Windows часто >12с
+      const res = await this.send("up", payload, 90_000);
       if (!res.ok) throw new Error(humanizeTunnelError(res.error));
       this.clearLastError();
       this.setStatus("connected");
     } catch (e) {
+      if (await this.probeConnected()) {
+        this.clearLastError();
+        this.setStatus("connected");
+        return;
+      }
       this.setStatus("error");
       const msg =
         e instanceof Error
@@ -260,18 +277,20 @@ function sanitizeError(raw?: string | null): string | null {
   if (!raw) return null;
   const msg = raw.trim();
   if (!msg) return null;
+  // Диагностические логи Wintun/helper часто содержат слова error/fail,
+  // но это не текст ошибки для UI.
   if (
     msg.includes("[tunnel-helper]") ||
     msg.includes("Using existing driver") ||
     msg.includes("Creating adapter") ||
     msg.includes("cleanup stale") ||
-    msg.includes("apply net")
+    msg.includes("apply net") ||
+    msg.includes("warmup") ||
+    msg.includes("handshake pending") ||
+    msg.includes("routes ok") ||
+    /^\[/m.test(msg)
   ) {
-    // Это диагностический лог, не текст ошибки
-    if (!/таймаут|ошибк|error|fail|denied|не удалось/i.test(msg)) {
-      return null;
-    }
-    return "Не удалось подключить туннель. Попробуй ещё раз.";
+    return null;
   }
   return msg;
 }

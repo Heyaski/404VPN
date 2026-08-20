@@ -33,3 +33,18 @@ if (dmg) {
 } else {
   console.warn("No macOS dmg found in releases/desktop");
 }
+
+const apkCandidates = [
+  path.join(root, "vpn_android", "app", "build", "outputs", "apk", "release", "app-release.apk"),
+  path.join(root, "vpn_android", "app", "build", "outputs", "apk", "debug", "app-debug.apk"),
+  path.join(publicDir, "404VPN.apk"),
+];
+const apk = apkCandidates.find((p) => fs.existsSync(p));
+if (apk && path.resolve(apk) !== path.resolve(publicDir, "404VPN.apk")) {
+  fs.copyFileSync(apk, path.join(publicDir, "404VPN.apk"));
+  console.log("Published", apk, "→ public/404VPN.apk");
+} else if (apk) {
+  console.log("Android APK already in public/404VPN.apk");
+} else {
+  console.warn("No Android APK found");
+}

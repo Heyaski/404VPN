@@ -111,7 +111,7 @@ export function Dashboard({
         </div>
       </div>
 
-      {error || status === "error" ? (
+      {(error || status === "error") && status !== "connected" ? (
         <div className="warn-box">
           {error || "Не удалось подключить туннель. Нажми «Подключить» ещё раз."}
         </div>

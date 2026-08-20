@@ -41,6 +41,16 @@
 		file_server
 	}
 
+	# Android APK
+	@downloadApk path /download/404VPN.apk /404VPN.apk
+	handle @downloadApk {
+		root * /srv/download
+		rewrite * /404VPN.apk
+		header Content-Type "application/vnd.android.package-archive"
+		header Content-Disposition "attachment; filename=\"404VPN.apk\""
+		file_server
+	}
+
 	# статика Mini App (SPA — все прочие пути отдают index.html)
 	handle {
 		root * /srv/app

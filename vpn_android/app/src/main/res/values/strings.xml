@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">404VPN</string>
+    <string name="vpn_notification_title">404VPN</string>
+    <string name="vpn_notification_text">Туннель активен</string>
+    <string name="vpn_channel_name">Подключение</string>
+</resources>
